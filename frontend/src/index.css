@@ -181,3 +181,59 @@ h1, h2, h3, h4 {
   font-weight: 700;
   color: var(--accent-cyan);
 }
+
+/* Tables / History List */
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  margin-top: 1rem;
+}
+
+.history-table th, .history-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--glass-border);
+  color: var(--text-main);
+  font-size: 0.95rem;
+}
+
+.history-table th {
+  color: var(--accent-cyan);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+}
+
+.action-btn.edit { color: var(--accent-cyan); }
+.action-btn.delete { color: #ff6b6b; }
+
+.action-btn:hover { background: rgba(255,255,255,0.05); }
+
+/* Layout Grid Dividers (Esq: Form / Dir: Conteúdo) */
+.content-divider {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+@media (min-width: 900px) {
+  .content-divider {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .form-sidebar { width: 350px; flex-shrink: 0; }
+  .main-content { flex-grow: 1; min-width: 0; }
+}
