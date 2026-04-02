@@ -1,7 +1,8 @@
 // Program.cs
-
 using Microsoft.EntityFrameworkCore;
 using Ritmo.Api.Data;
+
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 // =====================================================================
 // BUILDER — fase de configuração

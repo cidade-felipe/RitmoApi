@@ -99,9 +99,30 @@ public class RegistrosDiariosController : ControllerBase
         if (!usuarioExiste)
             return NotFound(new { mensagem = $"Usuário com ID {registro.UsuarioId} não encontrado." });
 
-        // Define a data de criação pelo servidor.
-        registro.DataCriacao = DateTime.UtcNow;
+        // Lógica de "Um registro por dia" (Upsert)
+        // Para DateOnly, a comparação é direta e atômica, sem problemas de fuso horário.
+        var registroExistente = await _context.RegistrosDiarios
+            .FirstOrDefaultAsync(r => r.UsuarioId == registro.UsuarioId && r.Data == registro.Data);
 
+        if (registroExistente != null)
+        {
+            // Atualiza o registro que já existe para o mesmo dia
+            registroExistente.Humor = registro.Humor;
+            registroExistente.Sono = registro.Sono;
+            registroExistente.Estudo = registro.Estudo;
+            registroExistente.Produtividade = registro.Produtividade;
+            registroExistente.Energia = registro.Energia;
+            registroExistente.Exercicio = registro.Exercicio;
+            registroExistente.Agua = registro.Agua;
+            registroExistente.Observacoes = registro.Observacoes;
+            
+            _context.RegistrosDiarios.Update(registroExistente);
+            await _context.SaveChangesAsync();
+            return Ok(registroExistente);
+        }
+
+        // Se não existir, cria um novo
+        registro.DataCriacao = DateTime.UtcNow;
         _context.RegistrosDiarios.Add(registro);
         await _context.SaveChangesAsync();
 

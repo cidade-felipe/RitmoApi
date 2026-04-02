@@ -109,7 +109,11 @@ export default function Dashboard() {
 
       // Se informou o peso, registra também!
       if (formData.peso) {
-         await apiClient.post('/pesos', { usuarioId: user.id, valor: parseFloat(formData.peso) });
+         await apiClient.post('/pesos', { 
+           usuarioId: user.id, 
+           valor: parseFloat(formData.peso),
+           data: formData.data 
+         });
       }
 
       setEditandoId(null);

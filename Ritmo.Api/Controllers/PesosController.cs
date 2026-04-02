@@ -42,6 +42,29 @@ public class PesosController : ControllerBase
         if (registro.Data == default)
             registro.Data = DateTime.UtcNow;
 
+        // Cria uma data "pura" (00:00:00 UTC) para busca e comparação, eliminando problemas de fuso horário
+        var dataLimpa = new DateTime(registro.Data.Year, registro.Data.Month, registro.Data.Day, 0, 0, 0, DateTimeKind.Utc);
+        
+        // Atualiza a data do registro para ser salva também na base UTC 00:00 se quisermos apenas "um por dia"
+        // Ou mantemos a hora original se o usuário quiser saber o exato momento.
+        // Vamos usar a dataLimpa para garantir a consistência do Upsert.
+        registro.Data = dataLimpa;
+
+        var dataInicio = dataLimpa;
+        var dataFim = dataLimpa.AddDays(1);
+
+        var pesoExistente = await _context.RegistrosPeso
+            .FirstOrDefaultAsync(p => p.UsuarioId == registro.UsuarioId && p.Data >= dataInicio && p.Data < dataFim);
+
+        if (pesoExistente != null)
+        {
+            pesoExistente.Valor = registro.Valor;
+            pesoExistente.Data = dataLimpa; // Normaliza para 00:00 na atualização tb
+            _context.RegistrosPeso.Update(pesoExistente);
+            await _context.SaveChangesAsync();
+            return Ok(pesoExistente);
+        }
+
         _context.RegistrosPeso.Add(registro);
         await _context.SaveChangesAsync();
 
