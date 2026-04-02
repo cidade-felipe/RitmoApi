@@ -128,6 +128,7 @@ API REST com:
 | Email | string | único |
 | Senha | string | |
 | DataCriacao | DateTime | |
+| Altura | int? | centímetros |
 
 **RegistroDiario**
 
@@ -144,6 +145,15 @@ API REST com:
 | Exercicio | bool | |
 | Agua | decimal | litros |
 | Observacoes | string? | |
+
+**RegistroPeso (Novo)**
+
+| Campo | Tipo | Obs |
+|---|---|---|
+| Id | int PK | |
+| UsuarioId | int FK | cascade delete |
+| Valor | decimal | peso em kg |
+| Data | DateTime | gerado automaticamente |
 
 **Meta**
 
@@ -179,3 +189,17 @@ API REST com:
 3. Define metas (`Meta`) para acompanhar seu desempenho
 4. Backend gera e salva `Insights` com base nos registros
 5. Dashboard exibe gráficos, compara metas vs real e mostra insights
+
+---
+
+## 🆕 Atualizações Recentes (Módulo Biometria & UI)
+
+Nesta última atualização, o projeto recebeu um intenso aprimoramento focado no monitoramento corporal e na melhoria espacial do Dashboard:
+
+* **Monitoramento Biométrico Fixado:** Inclusão de um novo modelo `RegistroPeso` no PostgreSQL suportado por um novo `PesosController`. O sistema agora coleta a *Altura* (perfil permanente) do usuário e seu *Peso Hoje* através do formulário diário unificado.
+* **Métricas em Tempo Real:** O painel processa matematicamente a biometria para exibir o IMC exato e estabelecer a Faixa de Peso Saudável em cartões no topo da tela.
+* **Layout "Cockpit" (1600px):** 
+    * Expansão lateral das bordas do container.
+    * A interface agora foi cravada em uma *Grid* rígida e previsível: 6 cartões no formato `3x2` e logo abaixo, 3 grandes gráficos no formato `3x1`.
+* **Escalas Híbridas (ComposedChart):** Para contornar a distorção do Polígono de Habilidades, o gráfico de Curva Físico-Recuperativa foi transformado em um gráfico Misto. Ele sobrepõe o Consumo de Água (Barras) com Horas de Sono (Área), respeitando os eixos numéricos originais de ambos sem distorcê-los.
+* **Novo Repositório de Dados:** Toda a cadeia de conexão foi transferida oficialmente do `produtosdb` antigo, para a nova raiz conceitual `ritmodb`.

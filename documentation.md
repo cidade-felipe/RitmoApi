@@ -71,6 +71,7 @@ erDiagram
     Usuario ||--o{ Meta : "Possui (1,1) -> (0,*)"
     Usuario ||--o{ Insight : "Possui (1,1) -> (0,*)"
     Usuario ||--|| ConfiguracaoPerfil : "Possui (1,1) -> (1,1)"
+    Usuario ||--o{ RegistroPeso : "Possui (1,1) -> (0,*)"
 
     Usuario {
         int Id PK
@@ -78,6 +79,7 @@ erDiagram
         string Email
         string Senha
         DateTime DataCriacao
+        int Altura
     }
 
     RegistroDiario {
@@ -126,6 +128,13 @@ erDiagram
         bool ExibirMetaNoDashboard
         bool ReceberNotificacoes
         bool ReceberRelatorioSemanal
+    }
+
+    RegistroPeso {
+        int Id PK
+        int UsuarioId FK
+        decimal Valor
+        DateTime Data
     }
 ```
 
