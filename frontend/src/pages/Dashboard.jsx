@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Activity, Droplets, Moon, Brain, RefreshCw, Pencil, Trash2, Bell, X } from 'lucide-react';
+import { LogOut, Activity, Droplets, Moon, Brain, RefreshCw, Pencil, Trash2, Bell, X, Scale, Ruler, TrendingUp } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area,
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
@@ -16,6 +16,9 @@ export default function Dashboard() {
   const [config, setConfig] = useState(null);
   const [insights, setInsights] = useState([]);
   const [user, setUser] = useState(null);
+  const [pesos, setPesos] = useState([]);
+  const [altura, setAltura] = useState('');
+  const [novoPeso, setNovoPeso] = useState('');
 
   // States de UI
   const [showInsights, setShowInsights] = useState(false);
@@ -32,7 +35,8 @@ export default function Dashboard() {
     energia: 3,
     exercicio: false,
     agua: 2.0,
-    observacoes: ''
+    observacoes: '',
+    peso: ''
   });
 
   const loadDashboard = async () => {
@@ -52,6 +56,14 @@ export default function Dashboard() {
       // 3. Notificações Inteligentes
       const insightsFetch = await apiClient.get(`/insights/usuario/${usuarioLogado.id}?apenasNaoLidos=true`);
       setInsights(insightsFetch);
+
+      // 4. Biometria (Pesos e Altura)
+      const pesosFetch = await apiClient.get(`/pesos/usuario/${usuarioLogado.id}`);
+      setPesos(pesosFetch);
+      
+      const userRefreshed = await apiClient.get(`/usuarios/${usuarioLogado.id}`);
+      setAltura(userRefreshed.altura || '');
+      setUser(userRefreshed);
 
     } catch (err) {
       console.error("Falha ao puxar os dados:", err);
@@ -95,10 +107,15 @@ export default function Dashboard() {
         await apiClient.post('/registrosdiarios', payload);
       }
 
+      // Se informou o peso, registra também!
+      if (formData.peso) {
+         await apiClient.post('/pesos', { usuarioId: user.id, valor: parseFloat(formData.peso) });
+      }
+
       setEditandoId(null);
       setFormData({
         data: new Date().toISOString().split('T')[0],
-        humor: 3, sono: 8, estudo: 0, produtividade: 3, energia: 3, exercicio: false, agua: 2.0, observacoes: ''
+        humor: 3, sono: 8, estudo: 0, produtividade: 3, energia: 3, exercicio: false, agua: 2.0, observacoes: '', peso: ''
       });
       await loadDashboard();
     } catch (err) {
@@ -134,6 +151,68 @@ export default function Dashboard() {
     }
   };
 
+  // Handlers Biométricos
+  const handleSalvarAltura = async () => {
+    try {
+      await apiClient.patch(`/usuarios/${user.id}/altura`, parseInt(altura), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      alert("Altura atualizada com sucesso!");
+      await loadDashboard();
+    } catch (err) {
+      alert("Erro ao atualizar altura");
+    }
+  };
+
+  const handleSalvarPeso = async (e) => {
+    e.preventDefault();
+    if (!novoPeso) return;
+    try {
+      await apiClient.post('/pesos', { usuarioId: user.id, valor: parseFloat(novoPeso) });
+      setNovoPeso('');
+      await loadDashboard();
+    } catch (err) {
+      alert("Erro ao registrar peso");
+    }
+  };
+
+  const handleExcluirPeso = async (id) => {
+    if (window.confirm("Excluir este registro de peso?")) {
+      try {
+        await apiClient.delete(`/pesos/${id}`);
+        await loadDashboard();
+      } catch (err) {
+        alert("Erro ao excluir peso");
+      }
+    }
+  };
+
+  // Helper de IMC
+  const calculaIMC = () => {
+    if (!altura || pesos.length === 0) return null;
+    const pesoAtual = pesos[0].valor;
+    const alturaMeters = altura / 100;
+    return (pesoAtual / (alturaMeters * alturaMeters)).toFixed(1);
+  };
+
+  const getIMCCategory = (imc) => {
+    if (!imc) return { label: 'Aguardando Altura/Peso', color: 'gray' };
+    const val = parseFloat(imc);
+    if (val < 18.5) return { label: 'Abaixo do Peso', color: '#f1c40f' };
+    if (val < 25) return { label: 'Normal', color: '#2ecc71' };
+    if (val < 30) return { label: 'Sobrepeso', color: '#e67e22' };
+    return { label: 'Obeso', color: '#e74c3c' };
+  };
+
+  const calculaPesoIdeal = () => {
+    if (!altura) return null;
+    const h = altura / 100;
+    return {
+      min: (18.5 * h * h).toFixed(1),
+      max: (24.9 * h * h).toFixed(1)
+    };
+  };
+
   if (loading) {
     return <div className="center-wrapper"><RefreshCw className="animate-spin" size={32} color="var(--accent-cyan)" /></div>;
   }
@@ -150,6 +229,16 @@ export default function Dashboard() {
     { metric: 'Sono', value: Number(((registros.reduce((acc, r) => acc + r.sono, 0) / registros.length) / 8 * 5).toFixed(1)) }, // Assumindo base 8h como Teto Perfeito 5
     { metric: 'Água', value: Number(((registros.reduce((acc, r) => acc + r.agua, 0) / registros.length) / 3 * 5).toFixed(1)) }  // Assumindo 3L de Água como Teto Perfeito 5
   ] : [];
+
+  const imcAtual = calculaIMC();
+  const imcMeta = getIMCCategory(imcAtual);
+  const pesoIdeal = calculaPesoIdeal();
+
+  // Inverter pesos para o gráfico (cronológico)
+  const weightDataForChart = pesos.slice().reverse().map(p => ({
+    data: p.data.split('T')[0].split('-').reverse().slice(0, 2).join('/'),
+    peso: p.valor
+  }));
 
   return (
     <div className="container">
@@ -223,8 +312,8 @@ export default function Dashboard() {
                 <input type="number" min="1" max="5" className="input-field" value={formData.humor} onChange={(e) => setFormData({...formData, humor: e.target.value})} />
               </div>
               <div>
-                <label className="input-label">Produt. (1-5)</label>
-                <input type="number" min="1" max="5" className="input-field" value={formData.produtividade} onChange={(e) => setFormData({...formData, produtividade: e.target.value})} />
+                <label className="input-label">Peso Hoje (kg)</label>
+                <input type="number" step="0.1" className="input-field" value={formData.peso} onChange={(e) => setFormData({...formData, peso: e.target.value})} placeholder="Ex: 75.5" />
               </div>
             </div>
 
@@ -239,9 +328,15 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div>
-              <label className="input-label">Energia: <span style={{color:'var(--text-light)'}}>{formData.energia}</span> / 5</label>
-              <input type="range" min="1" max="5" style={{width: '100%'}} value={formData.energia} onChange={(e) => setFormData({...formData, energia: e.target.value})} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div>
+                <label className="input-label">Produt. (1-5)</label>
+                <input type="number" min="1" max="5" className="input-field" value={formData.produtividade} onChange={(e) => setFormData({...formData, produtividade: e.target.value})} />
+              </div>
+              <div>
+                <label className="input-label">Energia: <span style={{color:'var(--text-light)'}}>{formData.energia}</span> / 5</label>
+                <input type="range" min="1" max="5" style={{width: '100%', marginTop: '8px'}} value={formData.energia} onChange={(e) => setFormData({...formData, energia: e.target.value})} />
+              </div>
             </div>
 
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)', marginTop: '0.5rem', cursor: 'pointer' }}>
@@ -262,11 +357,83 @@ export default function Dashboard() {
               </button>
             )}
           </form>
+
+          {/* Perfil Físico Fixo */}
+          <div className="glass-panel" style={{ marginTop: '1.5rem', padding: '1rem' }}>
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+              <Scale size={16} /> Meu Corpo
+            </h4>
+            
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+              <div style={{ flex: 1 }}>
+                <label className="input-label" style={{ fontSize: '0.65rem' }}>Altura Fixa (cm)</label>
+                <input type="number" className="input-field" style={{ padding: '6px 10px', fontSize: '0.9rem' }} value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="175" />
+              </div>
+              <button onClick={handleSalvarAltura} className="btn-primary" style={{ padding: '6px 14px', fontSize: '0.9rem', width: 'auto' }}>
+                <Ruler size={16} style={{ marginRight: '4px' }}/> Ajustar
+              </button>
+            </div>
+            <p style={{ fontSize: '0.7rem', color: 'gray', marginTop: '0.5rem', lineHeight: 1.2 }}>
+              A altura é necessária apenas para os cálculos de Zona Saudável e IMC. O seu peso da balança você informa lá nos dados diários acima!
+            </p>
+          </div>
         </aside>
 
         {/* Dashboard de Visualização Nativa (Direita) */}
         <main className="main-content">
-          <div className="dashboard-grid animate-fade-up delay-2" style={{ marginBottom: '2.5rem' }}>
+          <h3 style={{ marginBottom: '1.5rem', color: 'var(--text-light)' }}>Panorama Físico e Mental</h3>
+          <div className="dashboard-grid animate-fade-up delay-2" style={{ marginBottom: '2.5rem', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
+            
+            {/* Seu IMC */}
+            <div className="glass-panel" style={{ borderLeft: `4px solid ${imcMeta.color !== 'gray' ? imcMeta.color : 'var(--glass-border)'}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                 <div>
+                   <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Seu IMC</h3>
+                   <div className="stat-value" style={{ marginTop: '0.5rem', color: imcMeta.color !== 'gray' ? imcMeta.color : 'var(--accent-cyan)' }}>
+                     {imcAtual || '--'}
+                   </div>
+                   <div style={{ fontSize: '0.85rem', fontWeight: 600, color: imcMeta.color, textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>
+                     {imcMeta.label}
+                   </div>
+                 </div>
+                 <Scale size={32} color={imcMeta.color !== 'gray' ? imcMeta.color : 'var(--text-main)'} />
+              </div>
+            </div>
+
+            {/* Peso Atual */}
+            <div className="glass-panel">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Peso Registrado</h3>
+                 <TrendingUp size={24} color="var(--accent-cyan)" />
+              </div>
+              <div className="stat-value" style={{ marginTop: '1rem' }}>
+                {pesos[0]?.valor || '--'} <span style={{fontSize: '1rem'}}>kg</span>
+              </div>
+              {pesos.length > 1 && (
+                 <div style={{ fontSize: '0.75rem', color: 'var(--text-main)', marginTop: '4px' }}>
+                   Anterior: {pesos[1].valor} kg
+                 </div>
+              )}
+            </div>
+
+            {/* Faixa Ideal */}
+            <div className="glass-panel">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Faixa de Peso Ideal</h3>
+                 <Activity size={24} color="#2ecc71" />
+              </div>
+              <div className="stat-value" style={{ marginTop: '1rem', fontSize: '1.6rem' }}>
+                {pesoIdeal ? (
+                  <>
+                    {pesoIdeal.min} <span style={{fontSize: '1rem', color: 'var(--text-main)'}}>a</span> {pesoIdeal.max} <span style={{fontSize: '1rem'}}>kg</span>
+                  </>
+                ) : (
+                  <span style={{fontSize: '0.9rem', color: 'var(--text-main)'}}>Preencha a altura primeiro</span>
+                )}
+              </div>
+            </div>
+
+            {/* Média de Humor */}
             <div className="glass-panel">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                  <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Média de Humor</h3>
@@ -275,6 +442,7 @@ export default function Dashboard() {
               <div className="stat-value" style={{ marginTop: '1rem' }}>{avgHumor} <span style={{fontSize: '1rem'}}>/ 5</span></div>
             </div>
 
+            {/* Tempo de Sono */}
             <div className="glass-panel">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                  <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Tempo de Sono</h3>
@@ -283,6 +451,7 @@ export default function Dashboard() {
               <div className="stat-value" style={{ marginTop: '1rem' }}>{avgSono} <span style={{fontSize: '1rem'}}>h</span></div>
             </div>
 
+            {/* Hidratação */}
             <div className="glass-panel">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                  <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Hidratação Global</h3>
@@ -312,6 +481,20 @@ export default function Dashboard() {
                       <Radar name="Suas Médias" dataKey="value" stroke="var(--accent-purple)" fill="var(--accent-purple)" fillOpacity={0.5} />
                       <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-color-alt)', border: '1px solid var(--accent-purple)', borderRadius: '8px' }} />
                     </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Gráfico de Evolução de Peso */}
+                <div className="glass-panel" style={{ height: '350px' }}>
+                  <h4 style={{ marginBottom: '1.5rem', color: 'var(--text-main)' }}>Histórico de Peso (kg)</h4>
+                  <ResponsiveContainer width="100%" height="80%">
+                    <LineChart data={weightDataForChart}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                      <XAxis dataKey="data" stroke="var(--text-main)" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis domain={['dataMin - 5', 'dataMax + 5']} stroke="var(--text-main)" fontSize={12} tickLine={false} axisLine={false} />
+                      <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-color-alt)', border: '1px solid var(--accent-cyan)', borderRadius: '8px' }} />
+                      <Line type="monotone" dataKey="peso" stroke="var(--accent-cyan)" strokeWidth={3} dot={{ r: 4, fill: 'var(--accent-cyan)' }} activeDot={{ r: 6 }} />
+                    </LineChart>
                   </ResponsiveContainer>
                 </div>
 

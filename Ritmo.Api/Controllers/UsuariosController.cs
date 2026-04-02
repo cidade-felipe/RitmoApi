@@ -26,7 +26,7 @@ public class UsuariosController : ControllerBase
     public async Task<ActionResult<IEnumerable<object>>> GetUsuarios()
     {
         var usuarios = await _context.Usuarios
-            .Select(u => new { u.Id, u.Nome, u.Email, u.DataCriacao })
+            .Select(u => new { u.Id, u.Nome, u.Email, u.DataCriacao, u.Altura })
             .ToListAsync();
 
         return Ok(usuarios);
@@ -41,7 +41,7 @@ public class UsuariosController : ControllerBase
     {
         var usuario = await _context.Usuarios
             .Where(u => u.Id == id)
-            .Select(u => new { u.Id, u.Nome, u.Email, u.DataCriacao })
+            .Select(u => new { u.Id, u.Nome, u.Email, u.DataCriacao, u.Altura })
             .FirstOrDefaultAsync();
 
         if (usuario == null)
@@ -81,7 +81,7 @@ public class UsuariosController : ControllerBase
         await _context.SaveChangesAsync();
 
         // Retorna 201 sem expor a senha na resposta.
-        var resposta = new { usuario.Id, usuario.Nome, usuario.Email, usuario.DataCriacao };
+        var resposta = new { usuario.Id, usuario.Nome, usuario.Email, usuario.DataCriacao, usuario.Altura };
         return CreatedAtAction(nameof(GetUsuario), new { id = usuario.Id }, resposta);
     }
 
@@ -103,7 +103,26 @@ public class UsuariosController : ControllerBase
         // Atualiza apenas campos permitidos. Email e DataCriacao permanecem inalterados.
         usuarioExistente.Nome = usuario.Nome;
         usuarioExistente.Senha = usuario.Senha;
+        usuarioExistente.Altura = usuario.Altura;
 
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    // =====================================================================
+    // PATCH /api/usuarios/5/altura
+    // Atualiza apenas a altura do usuário.
+    // =====================================================================
+    [HttpPatch("{id}/altura")]
+    public async Task<IActionResult> UpdateAltura(int id, [FromBody] int altura)
+    {
+        var usuarioExistente = await _context.Usuarios.FindAsync(id);
+
+        if (usuarioExistente == null)
+            return NotFound(new { mensagem = $"Usuário com ID {id} não encontrado." });
+
+        usuarioExistente.Altura = altura;
         await _context.SaveChangesAsync();
 
         return NoContent();

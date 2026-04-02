@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<Meta> Metas { get; set; }
     public DbSet<Insight> Insights { get; set; }
     public DbSet<ConfiguracaoPerfil> ConfiguracoesPerfil { get; set; }
+    public DbSet<RegistroPeso> RegistrosPeso { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,6 +51,12 @@ public class AppDbContext : DbContext
             .HasOne(u => u.ConfiguracaoPerfil)
             .WithOne(c => c.Usuario)
             .HasForeignKey<ConfiguracaoPerfil>(c => c.UsuarioId)
+            .OnDelete(DeleteBehavior.Cascade);
+        // Relação 1:N — Usuario → RegistrosPeso (cascade delete)
+        modelBuilder.Entity<RegistroPeso>()
+            .HasOne(r => r.Usuario)
+            .WithMany(u => u.RegistrosPeso)
+            .HasForeignKey(r => r.UsuarioId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
