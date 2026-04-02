@@ -501,7 +501,7 @@ export default function Dashboard() {
                 <div className="glass-panel" style={{ height: '350px' }}>
                   <h4 style={{ marginBottom: '1.5rem', color: 'var(--text-main)' }}>Hábitos Vitais</h4>
                   <ResponsiveContainer width="100%" height="80%">
-                    <ComposedChart data={registros.slice().reverse()}>
+                    <ComposedChart data={registros.slice().reverse()} margin={{ top: 10, right: 30, bottom: 0, left: 20 }}>
                       <defs>
                         <linearGradient id="colorSono" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="var(--accent-cyan-dim)" stopOpacity={0.3}/>
@@ -515,8 +515,8 @@ export default function Dashboard() {
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                       <XAxis dataKey="data" stroke="var(--text-main)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => val.split('-').reverse().slice(0, 2).join('/')} />
                       
-                      <YAxis yAxisId="left" stroke="var(--accent-cyan-dim)" fontSize={12} tickLine={false} axisLine={false} domain={[0, 'dataMax + 2']} />
-                      <YAxis yAxisId="right" orientation="right" stroke="#3498db" fontSize={12} tickLine={false} axisLine={false} domain={[0, 'dataMax + 1']} />
+                      <YAxis yAxisId="left" stroke="var(--accent-cyan-dim)" fontSize={12} tickLine={false} axisLine={false} domain={[0, 'dataMax + 2']} label={{ value: 'Sono (h)', angle: -90, position: 'insideLeft', offset: -15, fill: 'var(--accent-cyan-dim)', fontSize: 11 }} />
+                      <YAxis yAxisId="right" orientation="right" stroke="#3498db" fontSize={12} tickLine={false} axisLine={false} domain={[0, 'dataMax + 1']} label={{ value: 'Água (L)', angle: 90, position: 'insideRight', offset: -15, fill: '#3498db', fontSize: 11 }} />
                       
                       <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-color-alt)', border: '1px solid var(--glass-border)', borderRadius: '8px' }} />
                       
