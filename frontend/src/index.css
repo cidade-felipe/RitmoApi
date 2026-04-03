@@ -236,7 +236,6 @@ h1, h2, h3, h4 {
     flex-direction: row;
     align-items: flex-start;
   }
-  .form-sidebar { width: 350px; flex-shrink: 0; }
   .main-content { flex-grow: 1; min-width: 0; }
 }
 
@@ -357,4 +356,164 @@ h1, h2, h3, h4 {
 
 .insight-close-btn:hover {
   color: #ff6b6b;
+}
+
+/* Modal Overlay (Glass Focus) */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7); /* Fundo escurecido conforme solicitado */
+  backdrop-filter: blur(8px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  opacity: 0;
+  animation: fadeIn 0.3s forwards;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  background: rgba(31, 40, 51, 0.9); /* Fundo mais sólido para o Modal */
+  border: 1px solid var(--accent-cyan);
+  padding: 2.5rem;
+  border-radius: var(--radius);
+  box-shadow: 0 0 40px rgba(102, 252, 241, 0.2);
+  transform: scale(0.9);
+  opacity: 0;
+  animation: modalScaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
+@keyframes modalScaleUp {
+  to { 
+    transform: scale(1); 
+    opacity: 1; 
+  }
+}
+
+/* Floating Action Button (FAB) */
+.fab-btn {
+  position: fixed;
+  bottom: 2.5rem;
+  right: 2.5rem;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(102, 252, 241, 0.4);
+  z-index: 9999;
+  transition: all 0.3s ease;
+}
+
+.fab-btn:hover {
+  transform: rotate(90deg) scale(1.1);
+  box-shadow: 0 0 30px rgba(155, 81, 224, 0.6);
+}
+
+.modal-close-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 1rem;
+}
+
+/* Tab Navigation System */
+.tabs-wrapper {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2.5rem;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 2px;
+  position: sticky;
+  top: 80px;
+  background: var(--bg-color);
+  z-index: 100;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  padding: 12px 24px;
+  color: var(--text-main);
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px 8px 0 0;
+}
+
+.tab-btn:hover {
+  color: var(--text-light);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-btn.active {
+  color: var(--accent-cyan);
+}
+
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--accent-cyan);
+  box-shadow: 0 0 12px var(--accent-cyan);
+}
+
+/* Secondary Action Buttons (Export, etc) */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(102, 252, 241, 0.1);
+  border: 1px solid var(--glass-border);
+  color: var(--accent-cyan);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: rgba(102, 252, 241, 0.2);
+  border-color: var(--accent-cyan);
+}
+
+.tab-content {
+  animation: fadeIn 0.4s forwards;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
 }

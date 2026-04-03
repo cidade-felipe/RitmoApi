@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Activity, Droplets, Moon, Brain, RefreshCw, Pencil, Trash2, Bell, X, Scale, Ruler, TrendingUp } from 'lucide-react';
+import { LogOut, Activity, Droplets, Moon, Brain, RefreshCw, Pencil, Trash2, Bell, X, Scale, Ruler, TrendingUp, LayoutDashboard, ClipboardList, Download, BarChart3 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area,
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ComposedChart, Bar
@@ -22,9 +23,10 @@ export default function Dashboard() {
 
   // States de UI
   const [showInsights, setShowInsights] = useState(false);
+  const [activeTab, setActiveTab] = useState('panorama'); // 'panorama', 'analise', 'relatorios'
   const panelRef = useRef(null);
 
-  // Estados do Formulário (CRUD do Registro)
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [formData, setFormData] = useState({
     data: new Date().toISOString().split('T')[0],
@@ -117,6 +119,7 @@ export default function Dashboard() {
       }
 
       setEditandoId(null);
+      setIsModalOpen(false); // Fecha o modal após salvar
       setFormData({
         data: new Date().toISOString().split('T')[0],
         humor: 3, sono: 8, estudo: 0, produtividade: 3, energia: 3, exercicio: false, agua: 2.0, observacoes: '', peso: ''
@@ -130,7 +133,7 @@ export default function Dashboard() {
   const handleEditar = (registro) => {
     setEditandoId(registro.id);
     setFormData({ ...registro, observacoes: registro.observacoes || '' });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setIsModalOpen(true); // Abre o modal para editar
   };
 
   const handleExcluir = async (id) => {
@@ -191,6 +194,70 @@ export default function Dashboard() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (registros.length === 0) return alert("Sem dados para exportar.");
+    
+    const headers = ["Data", "Humor", "Sono", "Agua", "Produtividade", "Energia", "Exercicio", "Peso", "Observacoes"];
+    const csvContent = [
+      headers.join(","),
+      ...registros.map(r => [
+        r.data,
+        r.humor,
+        r.sono,
+        r.agua,
+        r.produtividade,
+        r.energia,
+        r.exercicio ? "Sim" : "Nao",
+        r.peso || "",
+        `"${(r.observacoes || "").replace(/"/g, '""')}"`
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `ritmo_analytics_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportXLSX = () => {
+    if (registros.length === 0) return alert("Sem dados para exportar.");
+
+    // 1. Aba Diário de Hábitos
+    const diaryData = registros.map(r => ({
+        "Data": r.data.split('-').reverse().join('/'),
+        "Humor (1-5)": r.humor,
+        "Sono (h)": r.sono,
+        "Água (L)": r.agua,
+        "Produtividade (1-5)": r.produtividade,
+        "Energia (1-5)": r.energia,
+        "Exercício": r.exercicio ? "Sim" : "Não",
+        "Peso no Dia (kg)": r.peso || "Não Inf.",
+        "Observações": r.observacoes || ""
+    }));
+
+    // 2. Aba Histórico de Pesos (Biometria)
+    const weightHistory = pesos.map(p => ({
+        "Data do Registro": p.data.split('T')[0].split('-').reverse().join('/'),
+        "Peso Registrado (kg)": p.valor
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const wsDiary = XLSX.utils.json_to_sheet(diaryData);
+    const wsWeight = XLSX.utils.json_to_sheet(weightHistory);
+
+    // Adiciona as abas ao Workbook
+    XLSX.utils.book_append_sheet(wb, wsDiary, "Diário de Hábitos");
+    XLSX.utils.book_append_sheet(wb, wsWeight, "Evolução de Pesos");
+
+    // Dispara o download
+    XLSX.writeFile(wb, `Ritmo_Analitico_Completo_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   // Helper de IMC
   const calculaIMC = () => {
     if (!altura || pesos.length === 0) return null;
@@ -222,7 +289,7 @@ export default function Dashboard() {
   }
 
   const avgHumor = registros.length > 0 ? (registros.reduce((acc, r) => acc + r.humor, 0) / registros.length).toFixed(1) : '0';
-  const totalAgua = registros.reduce((acc, r) => acc + r.agua, 0).toFixed(1);
+  const avgAgua = registros.length > 0 ? (registros.reduce((acc, r) => acc + r.agua, 0) / registros.length).toFixed(1) : '0';
   const avgSono = registros.length > 0 ? (registros.reduce((acc, r) => acc + r.sono, 0) / registros.length).toFixed(1) : '0';
 
   // O Polígono de Radar mapeando apenas métricas que operam nativamente na escala de 1 a 5 (ou % de consistência)
@@ -297,289 +364,345 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      <div className="content-divider">
-        {/* Formulário Fixo na Esquerda */}
-        <aside className="form-sidebar glass-panel animate-fade-up delay-1">
-          <h3 style={{ borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem', marginBottom: '1.5rem', color: 'var(--text-light)' }}>
-            {editandoId ? 'Refinando o Dia' : 'Injetar Novo Registro'}
-          </h3>
-          <form onSubmit={handleSalvar} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div>
-              <label className="input-label">Data</label>
-              <input 
-                type="date" 
-                className="input-field" 
-                disabled={!!editandoId} 
-                max={new Date().toISOString().split('T')[0]} 
-                value={formData.data} 
-                onChange={(e) => setFormData({...formData, data: e.target.value})} 
-                required 
-              />
+      <div className="content-divider" style={{ display: 'block' }}>
+        {/* Modal de Lançamento de Dados */}
+        {isModalOpen && (
+          <div className="modal-overlay" onClick={(e) => e.target.className === 'modal-overlay' && setIsModalOpen(false)}>
+            <div className="modal-content glass-panel animate-fade-up">
+              <div className="modal-close-header">
+                <h3 style={{ margin: 0, color: 'var(--accent-cyan)' }}>
+                  {editandoId ? 'Refinando o Dia' : 'Injetar Novo Registro'}
+                </h3>
+                <button 
+                  onClick={() => setIsModalOpen(false)} 
+                  style={{ background: 'none', border: 'none', color: 'var(--text-main)', cursor: 'pointer' }}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSalvar} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label className="input-label">Data</label>
+                  <input 
+                    type="date" 
+                    className="input-field" 
+                    disabled={!!editandoId} 
+                    max={new Date().toISOString().split('T')[0]} 
+                    value={formData.data} 
+                    onChange={(e) => setFormData({...formData, data: e.target.value})} 
+                    required 
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label className="input-label">Humor (1-5)</label>
+                    <input type="number" min="1" max="5" className="input-field" value={formData.humor} onChange={(e) => setFormData({...formData, humor: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="input-label">Peso Hoje (kg)</label>
+                    <input type="number" step="0.1" className="input-field" value={formData.peso} onChange={(e) => setFormData({...formData, peso: e.target.value})} placeholder="Ex: 75.5" />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label className="input-label">Água (L)</label>
+                    <input type="number" step="0.1" className="input-field" value={formData.agua} onChange={(e) => setFormData({...formData, agua: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="input-label">Sono (h)</label>
+                    <input type="number" step="0.5" className="input-field" value={formData.sono} onChange={(e) => setFormData({...formData, sono: e.target.value})} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label className="input-label">Produt. (1-5)</label>
+                    <input type="number" min="1" max="5" className="input-field" value={formData.produtividade} onChange={(e) => setFormData({...formData, produtividade: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="input-label">Energia: <span style={{color:'var(--text-light)'}}>{formData.energia}</span> / 5</label>
+                    <input type="range" min="1" max="5" style={{width: '100%', marginTop: '8px'}} value={formData.energia} onChange={(e) => setFormData({...formData, energia: e.target.value})} />
+                  </div>
+                </div>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)', marginTop: '0.5rem', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={formData.exercicio} onChange={(e) => setFormData({...formData, exercicio: e.target.checked})} />
+                  Engajei Físicamente Hoje
+                </label>
+
+                <button type="submit" className="btn-primary" style={{ marginTop: '1rem' }}>
+                  {editandoId ? 'Atualizar Histórico' : 'Computar Dados'}
+                </button>
+              </form>
+
+              {/* Seção Meu Corpo dentro do Modal para ajuste rápido */}
+              <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--glass-border)' }}>
+                <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+                  <Scale size={16} /> Ajuste de Perfil (Altura)
+                </h4>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+                  <div style={{ flex: 1 }}>
+                    <input type="number" className="input-field" style={{ padding: '8px 12px', fontSize: '0.9rem' }} value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="Altura (cm)" />
+                  </div>
+                  <button onClick={handleSalvarAltura} className="btn-primary" style={{ padding: '8px 16px', fontSize: '0.9rem', width: 'auto' }}>
+                    Salvar
+                  </button>
+                </div>
+              </div>
             </div>
+          </div>
+        )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div>
-                <label className="input-label">Humor (1-5)</label>
-                <input type="number" min="1" max="5" className="input-field" value={formData.humor} onChange={(e) => setFormData({...formData, humor: e.target.value})} />
-              </div>
-              <div>
-                <label className="input-label">Peso Hoje (kg)</label>
-                <input type="number" step="0.1" className="input-field" value={formData.peso} onChange={(e) => setFormData({...formData, peso: e.target.value})} placeholder="Ex: 75.5" />
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div>
-                <label className="input-label">Água (L)</label>
-                <input type="number" step="0.1" className="input-field" value={formData.agua} onChange={(e) => setFormData({...formData, agua: e.target.value})} />
-              </div>
-              <div>
-                <label className="input-label">Sono (h)</label>
-                <input type="number" step="0.5" className="input-field" value={formData.sono} onChange={(e) => setFormData({...formData, sono: e.target.value})} />
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div>
-                <label className="input-label">Produt. (1-5)</label>
-                <input type="number" min="1" max="5" className="input-field" value={formData.produtividade} onChange={(e) => setFormData({...formData, produtividade: e.target.value})} />
-              </div>
-              <div>
-                <label className="input-label">Energia: <span style={{color:'var(--text-light)'}}>{formData.energia}</span> / 5</label>
-                <input type="range" min="1" max="5" style={{width: '100%', marginTop: '8px'}} value={formData.energia} onChange={(e) => setFormData({...formData, energia: e.target.value})} />
-              </div>
-            </div>
-
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)', marginTop: '0.5rem', cursor: 'pointer' }}>
-              <input type="checkbox" checked={formData.exercicio} onChange={(e) => setFormData({...formData, exercicio: e.target.checked})} />
-              Engajei Físicamente Hoje
-            </label>
-
-            <button type="submit" className="btn-primary" style={{ marginTop: '1rem' }}>
-              {editandoId ? 'Atualizar Histórico' : 'Computar Dados'}
+        {/* Dashboard de Visualização Nativa (Agora Full Width com Abas) */}
+        <main className="main-content" style={{ width: '100%' }}>
+          
+          {/* Navegação por Abas */}
+          <div className="tabs-wrapper animate-fade-up">
+            <button className={`tab-btn ${activeTab === 'panorama' ? 'active' : ''}`} onClick={() => setActiveTab('panorama')}>
+              <LayoutDashboard size={18} /> Panorama
             </button>
+            <button className={`tab-btn ${activeTab === 'analise' ? 'active' : ''}`} onClick={() => setActiveTab('analise')}>
+              <BarChart3 size={18} /> Análise Profunda
+            </button>
+            <button className={`tab-btn ${activeTab === 'relatorios' ? 'active' : ''}`} onClick={() => setActiveTab('relatorios')}>
+              <ClipboardList size={18} /> Relatórios
+            </button>
+          </div>
 
-            {editandoId && (
-              <button type="button" onClick={() => {
-                setEditandoId(null);
-                setFormData({...formData, data: new Date().toISOString().split('T')[0]}); 
-              }} style={{ background: 'transparent', border: '1px solid var(--glass-border)', color: 'var(--text-main)', padding: '10px', borderRadius: '8px', cursor: 'pointer' }}>
-                Abortar Edição
-              </button>
+          <div className="tab-content">
+            {activeTab === 'panorama' && (
+              <div className="animate-fade-up">
+                <h3 style={{ marginBottom: '1.5rem', color: 'var(--text-light)' }}>Visão Geral de Saúde</h3>
+                <div className="dashboard-grid animate-fade-up" style={{ marginBottom: '2.5rem', gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                  
+                  {/* Seu IMC */}
+                  <div className="glass-panel" style={{ borderLeft: `4px solid ${imcMeta.color !== 'gray' ? imcMeta.color : 'var(--glass-border)'}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Seu IMC</h3>
+                        <div className="stat-value" style={{ marginTop: '0.5rem', color: imcMeta.color !== 'gray' ? imcMeta.color : 'var(--accent-cyan)' }}>
+                          {imcAtual || '--'}
+                        </div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: imcMeta.color, textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>
+                          {imcMeta.label}
+                        </div>
+                      </div>
+                      <Scale size={32} color={imcMeta.color !== 'gray' ? imcMeta.color : 'var(--text-main)'} />
+                    </div>
+                  </div>
+
+                  {/* Peso Atual */}
+                  <div className="glass-panel">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Peso Registrado</h3>
+                      <TrendingUp size={24} color="var(--accent-cyan)" />
+                    </div>
+                    <div className="stat-value" style={{ marginTop: '1rem' }}>
+                      {pesos[0]?.valor || '--'} <span style={{fontSize: '1rem'}}>kg</span>
+                    </div>
+                    {pesos.length > 1 && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-main)', marginTop: '4px' }}>
+                        Anterior: {pesos[1].valor} kg
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Faixa Ideal */}
+                  <div className="glass-panel">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Faixa de Peso Ideal</h3>
+                      <Activity size={24} color="#2ecc71" />
+                    </div>
+                    <div className="stat-value" style={{ marginTop: '1rem', fontSize: '1.6rem' }}>
+                      {pesoIdeal ? (
+                        <>
+                          {pesoIdeal.min} <span style={{fontSize: '1rem', color: 'var(--text-main)'}}>a</span> {pesoIdeal.max} <span style={{fontSize: '1rem'}}>kg</span>
+                        </>
+                      ) : (
+                        <span style={{fontSize: '0.9rem', color: 'var(--text-main)'}}>Preencha a altura primeiro</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Média de Humor */}
+                  <div className="glass-panel">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Média de Humor</h3>
+                      <Brain size={24} color="var(--accent-purple)" />
+                    </div>
+                    <div className="stat-value" style={{ marginTop: '1rem' }}>{avgHumor} <span style={{fontSize: '1rem'}}>/ 5</span></div>
+                  </div>
+
+                  {/* Média de Sono */}
+                  <div className="glass-panel">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Média de Sono</h3>
+                      <Moon size={24} color="var(--accent-cyan-dim)" />
+                    </div>
+                    <div className="stat-value" style={{ marginTop: '1rem' }}>{avgSono} <span style={{fontSize: '1rem'}}>h / noite</span></div>
+                  </div>
+
+                  {/* Hidratação */}
+                  <div className="glass-panel">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Média de Hidratação</h3>
+                      <Droplets size={24} color="#3498db" />
+                    </div>
+                    <div className="stat-value" style={{ marginTop: '1rem' }}>{avgAgua} <span style={{fontSize: '1rem'}}>L / dia</span></div>
+                  </div>
+                </div>
+
+                <div className="dashboard-grid" style={{ gridTemplateColumns: '1fr 2fr', gap: '1.5rem' }}>
+                  <div className="glass-panel" style={{ height: '400px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <h4 style={{ marginBottom: '0.5rem', color: 'var(--text-main)', width: '100%', textAlign: 'left' }}>Polígono de Habilidades</h4>
+                    <ResponsiveContainer width="100%" height="90%">
+                      <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
+                        <PolarGrid stroke="rgba(255,255,255,0.1)" />
+                        <PolarAngleAxis dataKey="metric" tick={{ fill: 'var(--text-main)', fontSize: 12 }} />
+                        <Radar name="Suas Médias" dataKey="value" stroke="var(--accent-purple)" fill="var(--accent-purple)" fillOpacity={0.5} />
+                        <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-color-alt)', border: '1px solid var(--accent-purple)', borderRadius: '8px' }} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  
+                  <div className="glass-panel" style={{ height: '400px' }}>
+                    <h4 style={{ marginBottom: '1.5rem', color: 'var(--text-main)' }}>Tendência de Curto Prazo</h4>
+                    <ResponsiveContainer width="100%" height="80%">
+                      <LineChart data={registros.slice().reverse().slice(-7)}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                        <XAxis dataKey="data" stroke="var(--text-main)" fontSize={11} tickFormatter={(v) => v.split('-').reverse().slice(0, 2).join('/')} />
+                        <YAxis stroke="var(--text-main)" fontSize={11} />
+                        <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-color-alt)', border: '1px solid var(--glass-border)', borderRadius: '8px' }} />
+                        <Line type="step" dataKey="humor" stroke="var(--accent-purple)" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="energia" stroke="var(--accent-cyan)" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
             )}
-          </form>
 
-          {/* Perfil Físico Fixo */}
-          <div className="glass-panel" style={{ marginTop: '1.5rem', padding: '1rem' }}>
-            <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>
-              <Scale size={16} /> Meu Corpo
-            </h4>
-            
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
-              <div style={{ flex: 1 }}>
-                <label className="input-label" style={{ fontSize: '0.65rem' }}>Altura Fixa (cm)</label>
-                <input type="number" className="input-field" style={{ padding: '6px 10px', fontSize: '0.9rem' }} value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="175" />
-              </div>
-              <button onClick={handleSalvarAltura} className="btn-primary" style={{ padding: '6px 14px', fontSize: '0.9rem', width: 'auto' }}>
-                <Ruler size={16} style={{ marginRight: '4px' }}/> Ajustar
-              </button>
-            </div>
-            <p style={{ fontSize: '0.7rem', color: 'gray', marginTop: '0.5rem', lineHeight: 1.2 }}>
-              A altura é necessária apenas para os cálculos de Zona Saudável e IMC. O seu peso da balança você informa lá nos dados diários acima!
-            </p>
-          </div>
-        </aside>
-
-        {/* Dashboard de Visualização Nativa (Direita) */}
-        <main className="main-content">
-          <h3 style={{ marginBottom: '1.5rem', color: 'var(--text-light)' }}>Panorama Físico e Mental</h3>
-          <div className="dashboard-grid animate-fade-up delay-2" style={{ marginBottom: '2.5rem', gridTemplateColumns: 'repeat(3, 1fr)' }}>
-            
-            {/* Seu IMC */}
-            <div className="glass-panel" style={{ borderLeft: `4px solid ${imcMeta.color !== 'gray' ? imcMeta.color : 'var(--glass-border)'}` }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                 <div>
-                   <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Seu IMC</h3>
-                   <div className="stat-value" style={{ marginTop: '0.5rem', color: imcMeta.color !== 'gray' ? imcMeta.color : 'var(--accent-cyan)' }}>
-                     {imcAtual || '--'}
-                   </div>
-                   <div style={{ fontSize: '0.85rem', fontWeight: 600, color: imcMeta.color, textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>
-                     {imcMeta.label}
-                   </div>
-                 </div>
-                 <Scale size={32} color={imcMeta.color !== 'gray' ? imcMeta.color : 'var(--text-main)'} />
-              </div>
-            </div>
-
-            {/* Peso Atual */}
-            <div className="glass-panel">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Peso Registrado</h3>
-                 <TrendingUp size={24} color="var(--accent-cyan)" />
-              </div>
-              <div className="stat-value" style={{ marginTop: '1rem' }}>
-                {pesos[0]?.valor || '--'} <span style={{fontSize: '1rem'}}>kg</span>
-              </div>
-              {pesos.length > 1 && (
-                 <div style={{ fontSize: '0.75rem', color: 'var(--text-main)', marginTop: '4px' }}>
-                   Anterior: {pesos[1].valor} kg
-                 </div>
-              )}
-            </div>
-
-            {/* Faixa Ideal */}
-            <div className="glass-panel">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Faixa de Peso Ideal</h3>
-                 <Activity size={24} color="#2ecc71" />
-              </div>
-              <div className="stat-value" style={{ marginTop: '1rem', fontSize: '1.6rem' }}>
-                {pesoIdeal ? (
-                  <>
-                    {pesoIdeal.min} <span style={{fontSize: '1rem', color: 'var(--text-main)'}}>a</span> {pesoIdeal.max} <span style={{fontSize: '1rem'}}>kg</span>
-                  </>
-                ) : (
-                  <span style={{fontSize: '0.9rem', color: 'var(--text-main)'}}>Preencha a altura primeiro</span>
-                )}
-              </div>
-            </div>
-
-            {/* Média de Humor */}
-            <div className="glass-panel">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Média de Humor</h3>
-                 <Brain size={24} color="var(--accent-purple)" />
-              </div>
-              <div className="stat-value" style={{ marginTop: '1rem' }}>{avgHumor} <span style={{fontSize: '1rem'}}>/ 5</span></div>
-            </div>
-
-            {/* Tempo de Sono */}
-            <div className="glass-panel">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Tempo de Sono</h3>
-                 <Moon size={24} color="var(--accent-cyan-dim)" />
-              </div>
-              <div className="stat-value" style={{ marginTop: '1rem' }}>{avgSono} <span style={{fontSize: '1rem'}}>h</span></div>
-            </div>
-
-            {/* Hidratação */}
-            <div className="glass-panel">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>Hidratação Global</h3>
-                 <Droplets size={24} color="#3498db" />
-              </div>
-              <div className="stat-value" style={{ marginTop: '1rem' }}>{totalAgua} <span style={{fontSize: '1rem'}}>L</span></div>
-            </div>
-          </div>
-
-          {registros.length === 0 ? (
-             <div className="glass-panel animate-fade-up delay-3" style={{ textAlign: 'center', padding: '3rem' }}>
-                Comece preenchendo o lado esquerdo com a sua quantidade de água e horas de sono para as engrenagens ganharem vida!
-             </div>
-          ) : (
-            <>
-              {/* Malha Inferior de Gráficos Cruzados */}
-              <div className="dashboard-grid animate-fade-up delay-3" style={{ marginBottom: '2.5rem', gridTemplateColumns: 'repeat(3, 1fr)' }}>
+            {activeTab === 'analise' && (
+              <div className="animate-fade-up">
+                <div className="chart-header">
+                  <h3 style={{ color: 'var(--text-light)' }}>Inteligência de Longo Prazo</h3>
+                </div>
                 
-                {/* O Radar Poligonal (Atributos Gerais) */}
-                <div className="glass-panel" style={{ height: '350px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <h4 style={{ marginBottom: '0.5rem', color: 'var(--text-main)', width: '100%', textAlign: 'left' }}>Polígono de Habilidades (Status Diário)</h4>
-                  <ResponsiveContainer width="100%" height="90%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
-                      <PolarGrid stroke="rgba(255,255,255,0.1)" />
-                      <PolarAngleAxis dataKey="metric" tick={{ fill: 'var(--text-main)', fontSize: 12 }} />
-                      <PolarRadiusAxis angle={30} domain={[0, 5]} tick={{ fill: 'rgba(255,255,255,0.2)' }} axisLine={false} />
-                      <Radar name="Suas Médias" dataKey="value" stroke="var(--accent-purple)" fill="var(--accent-purple)" fillOpacity={0.5} />
-                      <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-color-alt)', border: '1px solid var(--accent-purple)', borderRadius: '8px' }} />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                  <div className="glass-panel" style={{ height: '500px' }}>
+                    <h4 style={{ marginBottom: '1.5rem', color: 'var(--text-main)' }}>Evolução de Peso e Zona Metabólica</h4>
+                    <ResponsiveContainer width="100%" height="85%">
+                      <AreaChart data={weightDataForChart}>
+                        <defs>
+                          <linearGradient id="colorPeso" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="var(--accent-cyan)" stopOpacity={0.4}/>
+                            <stop offset="95%" stopColor="var(--accent-cyan)" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                        <XAxis dataKey="data" stroke="var(--text-main)" />
+                        <YAxis domain={['dataMin - 3', 'dataMax + 3']} stroke="var(--text-main)" />
+                        <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-color-alt)', border: '1px solid var(--accent-cyan)', borderRadius: '12px' }} />
+                        <Area type="monotone" dataKey="peso" stroke="var(--accent-cyan)" strokeWidth={4} fillOpacity={1} fill="url(#colorPeso)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
 
-                {/* Gráfico de Evolução de Peso */}
-                <div className="glass-panel" style={{ height: '350px' }}>
-                  <h4 style={{ marginBottom: '1.5rem', color: 'var(--text-main)' }}>Histórico de Peso (kg)</h4>
-                  <ResponsiveContainer width="100%" height="80%">
-                    <LineChart data={weightDataForChart}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                      <XAxis dataKey="data" stroke="var(--text-main)" fontSize={12} tickLine={false} axisLine={false} />
-                      <YAxis domain={['dataMin - 5', 'dataMax + 5']} stroke="var(--text-main)" fontSize={12} tickLine={false} axisLine={false} />
-                      <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-color-alt)', border: '1px solid var(--accent-cyan)', borderRadius: '8px' }} />
-                      <Line type="monotone" dataKey="peso" stroke="var(--accent-cyan)" strokeWidth={3} dot={{ r: 4, fill: 'var(--accent-cyan)' }} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Gráfico de Hábitos Vitais (Água e Sono com Escalas Duplas) */}
-                <div className="glass-panel" style={{ height: '350px' }}>
-                  <h4 style={{ marginBottom: '1.5rem', color: 'var(--text-main)' }}>Hábitos Vitais</h4>
-                  <ResponsiveContainer width="100%" height="80%">
-                    <ComposedChart data={registros.slice().reverse()} margin={{ top: 10, right: 30, bottom: 0, left: 20 }}>
-                      <defs>
-                        <linearGradient id="colorSono" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="var(--accent-cyan-dim)" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="var(--accent-cyan-dim)" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorAgua" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3498db" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#2980b9" stopOpacity={0.4}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                      <XAxis dataKey="data" stroke="var(--text-main)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => val.split('-').reverse().slice(0, 2).join('/')} />
-                      
-                      <YAxis yAxisId="left" stroke="var(--accent-cyan-dim)" fontSize={12} tickLine={false} axisLine={false} domain={[0, 'dataMax + 2']} label={{ value: 'Sono (h)', angle: -90, position: 'insideLeft', offset: -15, fill: 'var(--accent-cyan-dim)', fontSize: 11 }} />
-                      <YAxis yAxisId="right" orientation="right" stroke="#3498db" fontSize={12} tickLine={false} axisLine={false} domain={[0, 'dataMax + 1']} label={{ value: 'Água (L)', angle: 90, position: 'insideRight', offset: -15, fill: '#3498db', fontSize: 11 }} />
-                      
-                      <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-color-alt)', border: '1px solid var(--glass-border)', borderRadius: '8px' }} />
-                      
-                      <Bar yAxisId="right" dataKey="agua" name="Água (L)" fill="url(#colorAgua)" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                      <Area yAxisId="left" type="monotone" dataKey="sono" name="Sono (h)" stroke="var(--accent-cyan-dim)" strokeWidth={2} fillOpacity={1} fill="url(#colorSono)" />
-                    </ComposedChart>
-                  </ResponsiveContainer>
+                  <div className="glass-panel" style={{ height: '500px' }}>
+                    <h4 style={{ marginBottom: '1.5rem', color: 'var(--text-main)' }}>Correlação: Humor vs Sono vs Energia</h4>
+                    <ResponsiveContainer width="100%" height="85%">
+                      <ComposedChart data={registros.slice().reverse()}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                        <XAxis dataKey="data" stroke="var(--text-main)" tickFormatter={(v) => v.split('-').reverse().slice(0, 2).join('/')} />
+                        <YAxis stroke="var(--text-main)" />
+                        <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-color-alt)', border: '1px solid var(--glass-border)', borderRadius: '12px' }} />
+                        <Area type="monotone" dataKey="sono" fill="var(--accent-cyan-dim)" fillOpacity={0.1} stroke="var(--accent-cyan-dim)" strokeWidth={2} />
+                        <Line type="monotone" dataKey="humor" stroke="var(--accent-purple)" strokeWidth={3} dot={{ r: 4 }} />
+                        <Line type="monotone" dataKey="energia" stroke="#f1c40f" strokeWidth={2} strokeDasharray="5 5" />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
+            )}
 
-              {/* Histórico Limpo de Manipulação */}
-              <div className="glass-panel animate-fade-up delay-4" style={{ overflowX: 'auto' }}>
-                <h3 style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>Linha do Tempo (Registros Base)</h3>
-                <table className="history-table">
-                  <thead>
-                    <tr>
-                      <th>Registrado em</th>
-                      <th>Água</th>
-                      <th>Descanso</th>
-                      <th>Humor Geral</th>
-                      <th>Movimentação Física</th>
-                      <th style={{ textAlign: 'right' }}>Ações de Revisão</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {registros.map(r => (
-                      <tr key={r.id}>
-                        <td style={{ fontWeight: '500', color: 'var(--text-light)' }}>
-                          {r.data.split('-').reverse().join('/')}
-                        </td>
-                        <td>{r.agua} Litros</td>
-                        <td>{r.sono} Horas</td>
-                        <td>{r.humor} Pontos</td>
-                        <td>{r.exercicio ? <span style={{color: 'var(--accent-cyan)'}}>✅ Concluído</span> : <span style={{color: '#ff6b6b'}}>❌ Pendente</span>}</td>
-                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                          <button className="action-btn edit" title="Remodelar os dados (Editar)" onClick={() => handleEditar(r)}>
-                            <Pencil size={18} />
-                          </button>
-                          <button className="action-btn delete" title="Extinguir do Banco (Apagar)" onClick={() => handleExcluir(r.id)}>
-                            <Trash2 size={18} />
-                          </button>
-                        </td>
+            {activeTab === 'relatorios' && (
+              <div className="animate-fade-up">
+                <div className="chart-header">
+                  <h3 style={{ color: 'var(--text-light)' }}>Linha do Tempo Completa</h3>
+                  <div style={{ display: 'flex', gap: '0.8rem' }}>
+                    <button className="btn-secondary" onClick={handleExportCSV}>
+                      <Download size={18} /> Exportar CSV
+                    </button>
+                    <button className="btn-secondary" onClick={handleExportXLSX} style={{ background: 'rgba(46, 204, 113, 0.1)', color: '#2ecc71' }}>
+                      <Download size={18} /> Exportar Excel (XLSX)
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="glass-panel" style={{ overflowX: 'auto' }}>
+                  <table className="history-table">
+                    <thead>
+                      <tr>
+                        <th>Registrado em</th>
+                        <th>Água</th>
+                        <th>Descanso</th>
+                        <th>Humor</th>
+                        <th>Produt.</th>
+                        <th>Energia</th>
+                        <th>Físico</th>
+                        <th style={{ textAlign: 'right' }}>Ações</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {registros.map(r => (
+                        <tr key={r.id}>
+                          <td style={{ fontWeight: '600', color: 'var(--text-light)' }}>
+                            {r.data.split('-').reverse().join('/')}
+                          </td>
+                          <td>{r.agua}L</td>
+                          <td>{r.sono}h</td>
+                          <td>{r.humor}/5</td>
+                          <td>{r.produtividade}/5</td>
+                          <td>{r.energia}/5</td>
+                          <td>{r.exercicio ? "✅" : "❌"}</td>
+                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <button className="action-btn edit" onClick={() => handleEditar(r)}>
+                              <Pencil size={18} />
+                            </button>
+                            <button className="action-btn delete" onClick={() => handleExcluir(r.id)}>
+                              <Trash2 size={18} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </>
-          )}
+            )}
+          </div>
         </main>
       </div>
+
+      {/* Botão Flutuante (FAB) */}
+      <button 
+        className="fab-btn animate-fade-up delay-4" 
+        onClick={() => {
+          setEditandoId(null);
+          setFormData({
+            data: new Date().toISOString().split('T')[0],
+            humor: 3, sono: 8, estudo: 0, produtividade: 3, energia: 3, exercicio: false, agua: 2.0, observacoes: '', peso: ''
+          });
+          setIsModalOpen(true);
+        }}
+        title="Novo Registro"
+      >
+        <Activity size={32} />
+      </button>
     </div>
   );
 }
