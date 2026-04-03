@@ -160,8 +160,12 @@ export default function Dashboard() {
 
   // Handlers Biométricos
   const handleSalvarAltura = async () => {
+    const v = parseInt(altura);
+    if (isNaN(v) || v < 50 || v > 300) {
+      return alert("Por favor, insira uma altura válida entre 50cm e 300cm.");
+    }
     try {
-      await apiClient.patch(`/usuarios/${user.id}/altura`, parseInt(altura), {
+      await apiClient.patch(`/usuarios/${user.id}/altura`, v, {
         headers: { 'Content-Type': 'application/json' }
       });
       alert("Altura atualizada com sucesso!");
@@ -402,18 +406,18 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <label className="input-label">Peso Hoje (kg)</label>
-                    <input type="number" step="0.1" className="input-field" value={formData.peso} onChange={(e) => setFormData({...formData, peso: e.target.value})} placeholder="Ex: 75.5" />
+                    <input type="number" step="0.1" min="10" max="600" className="input-field" value={formData.peso} onChange={(e) => setFormData({...formData, peso: e.target.value})} placeholder="Ex: 75.5" />
                   </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
                     <label className="input-label">Água (L)</label>
-                    <input type="number" step="0.1" className="input-field" value={formData.agua} onChange={(e) => setFormData({...formData, agua: e.target.value})} />
+                    <input type="number" step="0.1" min="0" max="25" className="input-field" value={formData.agua} onChange={(e) => setFormData({...formData, agua: e.target.value})} />
                   </div>
                   <div>
                     <label className="input-label">Sono (h)</label>
-                    <input type="number" step="0.5" className="input-field" value={formData.sono} onChange={(e) => setFormData({...formData, sono: e.target.value})} />
+                    <input type="number" step="0.5" min="0" max="24" className="input-field" value={formData.sono} onChange={(e) => setFormData({...formData, sono: e.target.value})} />
                   </div>
                 </div>
 
@@ -445,7 +449,7 @@ export default function Dashboard() {
                 </h4>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
                   <div style={{ flex: 1 }}>
-                    <input type="number" className="input-field" style={{ padding: '8px 12px', fontSize: '0.9rem' }} value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="Altura (cm)" />
+                    <input type="number" min="50" max="300" className="input-field" style={{ padding: '8px 12px', fontSize: '0.9rem' }} value={altura} onChange={(e) => setAltura(e.target.value)} placeholder="Altura (cm)" />
                   </div>
                   <button onClick={handleSalvarAltura} className="btn-primary" style={{ padding: '8px 16px', fontSize: '0.9rem', width: 'auto' }}>
                     Salvar
@@ -562,6 +566,7 @@ export default function Dashboard() {
                       <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
                         <PolarGrid stroke="rgba(255,255,255,0.1)" />
                         <PolarAngleAxis dataKey="metric" tick={{ fill: 'var(--text-main)', fontSize: 12 }} />
+                        <PolarRadiusAxis domain={[0, 5]} tick={false} axisLine={false} />
                         <Radar name="Suas Médias" dataKey="value" stroke="var(--accent-purple)" fill="var(--accent-purple)" fillOpacity={0.5} />
                         <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-color-alt)', border: '1px solid var(--accent-purple)', borderRadius: '8px' }} />
                       </RadarChart>
