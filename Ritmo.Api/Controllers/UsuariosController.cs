@@ -1,9 +1,6 @@
-// Controllers/UsuariosController.cs
-
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Ritmo.Api.Data;
-using Ritmo.Api.Models;
+using Ritmo.Api.DTOs;
+using Ritmo.Api.Services;
 
 namespace Ritmo.Api.Controllers;
 
@@ -11,137 +8,65 @@ namespace Ritmo.Api.Controllers;
 [Route("api/[controller]")]
 public class UsuariosController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly UsuarioService _service;
 
-    public UsuariosController(AppDbContext context)
+    public UsuariosController(UsuarioService service)
     {
-        _context = context;
+        _service = service;
     }
 
-    // =====================================================================
-    // GET /api/usuarios
-    // Retorna todos os usuários (sem a senha por segurança).
-    // =====================================================================
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<object>>> GetUsuarios()
+    public async Task<ActionResult<IEnumerable<UsuarioResponse>>> GetUsuarios()
     {
-        var usuarios = await _context.Usuarios
-            .Select(u => new { u.Id, u.Nome, u.Email, u.DataCriacao, u.Altura })
-            .ToListAsync();
-
-        return Ok(usuarios);
+        return Ok(await _service.ListarTodos());
     }
 
-    // =====================================================================
-    // GET /api/usuarios/5
-    // Retorna um usuário pelo ID (sem a senha).
-    // =====================================================================
     [HttpGet("{id}")]
-    public async Task<ActionResult<object>> GetUsuario(int id)
+    public async Task<ActionResult<UsuarioResponse>> GetUsuario(int id)
     {
-        var usuario = await _context.Usuarios
-            .Where(u => u.Id == id)
-            .Select(u => new { u.Id, u.Nome, u.Email, u.DataCriacao, u.Altura })
-            .FirstOrDefaultAsync();
-
+        var usuario = await _service.BuscarPorId(id);
         if (usuario == null)
             return NotFound(new { mensagem = $"Usuário com ID {id} não encontrado." });
 
         return Ok(usuario);
     }
 
-    // =====================================================================
-    // POST /api/usuarios
-    // Cria um novo usuário.
-    //
-    // Body esperado:
-    // {
-    //   "nome": "Felipe",
-    //   "email": "felipe@email.com",
-    //   "senha": "minhasenha123"
-    // }
-    // =====================================================================
     [HttpPost]
-    public async Task<ActionResult<object>> PostUsuario(Usuario usuario)
+    public async Task<ActionResult<UsuarioResponse>> PostUsuario(UsuarioRequest usuario)
     {
-        // Verifica se já existe um usuário com o mesmo email.
-        var emailExistente = await _context.Usuarios
-            .AnyAsync(u => u.Email == usuario.Email);
-
-        if (emailExistente)
+        var result = await _service.Criar(usuario);
+        if (result == null)
             return Conflict(new { mensagem = "Já existe um usuário cadastrado com esse email." });
 
-        // Define a data de criação pelo servidor.
-        usuario.DataCriacao = DateTime.UtcNow;
-
-        // Cria automaticamente as configurações padrão de perfil (relação 1:1)
-        usuario.ConfiguracaoPerfil = new ConfiguracaoPerfil();
-
-        _context.Usuarios.Add(usuario);
-        await _context.SaveChangesAsync();
-
-        // Retorna 201 sem expor a senha na resposta.
-        var resposta = new { usuario.Id, usuario.Nome, usuario.Email, usuario.DataCriacao, usuario.Altura };
-        return CreatedAtAction(nameof(GetUsuario), new { id = usuario.Id }, resposta);
+        return CreatedAtAction(nameof(GetUsuario), new { id = result.Id }, result);
     }
 
-    // =====================================================================
-    // PUT /api/usuarios/5
-    // Atualiza nome e/ou senha do usuário.
-    // =====================================================================
     [HttpPut("{id}")]
-    public async Task<IActionResult> PutUsuario(int id, Usuario usuario)
+    public async Task<IActionResult> PutUsuario(int id, UsuarioRequest usuario)
     {
-        if (id != usuario.Id)
-            return BadRequest(new { mensagem = "O ID da URL não corresponde ao ID no body." });
-
-        var usuarioExistente = await _context.Usuarios.FindAsync(id);
-
-        if (usuarioExistente == null)
+        var sucesso = await _service.Atualizar(id, usuario);
+        if (!sucesso)
             return NotFound(new { mensagem = $"Usuário com ID {id} não encontrado." });
-
-        // Atualiza apenas campos permitidos. Email e DataCriacao permanecem inalterados.
-        usuarioExistente.Nome = usuario.Nome;
-        usuarioExistente.Senha = usuario.Senha;
-        usuarioExistente.Altura = usuario.Altura;
-
-        await _context.SaveChangesAsync();
 
         return NoContent();
     }
 
-    // =====================================================================
-    // PATCH /api/usuarios/5/altura
-    // Atualiza apenas a altura do usuário.
-    // =====================================================================
     [HttpPatch("{id}/altura")]
     public async Task<IActionResult> UpdateAltura(int id, [FromBody] int altura)
     {
-        var usuarioExistente = await _context.Usuarios.FindAsync(id);
-
-        if (usuarioExistente == null)
+        var sucesso = await _service.AtualizarAltura(id, altura);
+        if (!sucesso)
             return NotFound(new { mensagem = $"Usuário com ID {id} não encontrado." });
-
-        usuarioExistente.Altura = altura;
-        await _context.SaveChangesAsync();
 
         return NoContent();
     }
 
-    // =====================================================================
-    // DELETE /api/usuarios/5
-    // Remove o usuário e seus registros diários (cascade).
-    // =====================================================================
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUsuario(int id)
     {
-        var usuario = await _context.Usuarios.FindAsync(id);
-
-        if (usuario == null)
+        var sucesso = await _service.Deletar(id);
+        if (!sucesso)
             return NotFound(new { mensagem = $"Usuário com ID {id} não encontrado." });
-
-        _context.Usuarios.Remove(usuario);
-        await _context.SaveChangesAsync();
 
         return NoContent();
     }

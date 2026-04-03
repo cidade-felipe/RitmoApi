@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Ritmo.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d7d537bb8e73794b5fa9d645a3d9a2d4644c4710")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+303d767616f18972251f9bdaf2c19e91f208cab3")]
 [assembly: System.Reflection.AssemblyProductAttribute("Ritmo.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Ritmo.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

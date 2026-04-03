@@ -24,6 +24,10 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Serviços de Negócio (Desacoplados)
+builder.Services.AddScoped<Ritmo.Api.Services.RegistroDiarioService>();
+builder.Services.AddScoped<Ritmo.Api.Services.UsuarioService>();
+
 // Adiciona o Swagger/OpenAPI — interface web para testar a API.
 // AddEndpointsApiExplorer() descobre os endpoints disponíveis.
 // AddSwaggerGen() gera a documentação interativa da API.
