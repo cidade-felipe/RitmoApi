@@ -16,24 +16,25 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-    
-    // Simulação do Login real. Por ora, vamos cadastrar e entrar automaticamente.
+
     try {
       if (isRegistering) {
-        // Rota de POST /api/usuarios
+        // POST /api/usuarios — cria novo usuário
         const response = await apiClient.post('/usuarios', formData);
-        
-        // Sucesso cria o usuário, guardamos o ID local (apenas para teste visual sem JWT)
         localStorage.setItem('usuarioLogado', JSON.stringify({ id: response.id, nome: response.nome }));
         navigate('/dashboard');
       } else {
-        // Para fingir Login em dev (idealmente teríamos rota POST /api/login devolvendo um token)
-        // Como o foco é a dashboard agora, vamos forçar o ID 1 por via de teste para leitura fluída.
-        localStorage.setItem('usuarioLogado', JSON.stringify({ id: 1, nome: formData.email.split('@')[0] }));
+        // POST /api/usuarios/login — valida email e senha no banco
+        const response = await apiClient.post('/usuarios/login', {
+          email: formData.email,
+          senha: formData.senha
+        });
+        localStorage.setItem('usuarioLogado', JSON.stringify({ id: response.id, nome: response.nome }));
         navigate('/dashboard');
       }
     } catch (err) {
-      setError(err.response?.data?.mensagem || 'Falha ao comunicar com o servidor. O backend (porta 5066) está rodando?');
+      // O backend retorna { mensagem: "..." } nos erros 409 e 401
+      setError(err.response?.data?.mensagem || 'Falha ao comunicar com o servidor. O backend está rodando?');
     }
   };
 
