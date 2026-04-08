@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Ritmo.Api.DTOs;
+using Ritmo.Api.Security;
 using Ritmo.Api.Services;
 
 namespace Ritmo.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class UsuariosController : ControllerBase
 {
     private readonly UsuarioService _service;
@@ -18,12 +21,24 @@ public class UsuariosController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<UsuarioResponse>>> GetUsuarios()
     {
-        return Ok(await _service.ListarTodos());
+        var userId = User.GetAuthenticatedUserId();
+        if (userId == null)
+            return Unauthorized(new { mensagem = "Usuário autenticado inválido." });
+
+        var usuario = await _service.BuscarPorId(userId.Value);
+        if (usuario == null)
+            return NotFound(new { mensagem = $"Usuário com ID {userId.Value} não encontrado." });
+
+        return Ok(new[] { usuario });
     }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<UsuarioResponse>> GetUsuario(int id)
     {
+        var userId = User.GetAuthenticatedUserId();
+        if (userId != id)
+            return Forbid();
+
         var usuario = await _service.BuscarPorId(id);
         if (usuario == null)
             return NotFound(new { mensagem = $"Usuário com ID {id} não encontrado." });
@@ -32,17 +47,19 @@ public class UsuariosController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<UsuarioResponse>> PostUsuario(UsuarioRequest usuario)
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthResponse>> PostUsuario(UsuarioRequest usuario)
     {
-        var result = await _service.Criar(usuario);
+        var result = await _service.RegistrarComToken(usuario);
         if (result == null)
             return Conflict(new { mensagem = "Já existe um usuário cadastrado com esse email." });
 
-        return CreatedAtAction(nameof(GetUsuario), new { id = result.Id }, result);
+        return CreatedAtAction(nameof(GetUsuario), new { id = result.Usuario.Id }, result);
     }
 
     [HttpPost("login")]
-    public async Task<ActionResult<UsuarioResponse>> Login(LoginRequest request)
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthResponse>> Login(LoginRequest request)
     {
         var result = await _service.Login(request);
         if (result == null)
@@ -54,6 +71,10 @@ public class UsuariosController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> PutUsuario(int id, UsuarioRequest usuario)
     {
+        var userId = User.GetAuthenticatedUserId();
+        if (userId != id)
+            return Forbid();
+
         var sucesso = await _service.Atualizar(id, usuario);
         if (!sucesso)
             return NotFound(new { mensagem = $"Usuário com ID {id} não encontrado." });
@@ -65,6 +86,10 @@ public class UsuariosController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUsuario(int id)
     {
+        var userId = User.GetAuthenticatedUserId();
+        if (userId != id)
+            return Forbid();
+
         var sucesso = await _service.Deletar(id);
         if (!sucesso)
             return NotFound(new { mensagem = $"Usuário com ID {id} não encontrado." });

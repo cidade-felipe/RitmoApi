@@ -1,12 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Ritmo.Api.Data;
 using Ritmo.Api.Models;
+using Ritmo.Api.Security;
 
 namespace Ritmo.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class ConfiguracoesPerfilController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -23,6 +26,9 @@ public class ConfiguracoesPerfilController : ControllerBase
     [HttpGet("usuario/{usuarioId}")]
     public async Task<ActionResult<ConfiguracaoPerfil>> GetConfiguracaoPorUsuario(int usuarioId)
     {
+        if (usuarioId != User.GetAuthenticatedUserId())
+            return Forbid();
+
         var config = await _context.ConfiguracoesPerfil
             .FirstOrDefaultAsync(c => c.UsuarioId == usuarioId);
 
@@ -45,6 +51,10 @@ public class ConfiguracoesPerfilController : ControllerBase
         var configExistente = await _context.ConfiguracoesPerfil.FindAsync(id);
         if (configExistente == null)
             return NotFound(new { mensagem = $"O registro de ID {id} da configuração foi revogado ou não existe." });
+
+        if (configExistente.UsuarioId != User.GetAuthenticatedUserId() ||
+            configuracao.UsuarioId != configExistente.UsuarioId)
+            return Forbid();
 
         // Preservamos FK e PK, atualizando somente parâmetros úteis
         configExistente.TemaEscuro = configuracao.TemaEscuro;

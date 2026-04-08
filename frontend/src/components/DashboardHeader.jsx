@@ -1,6 +1,7 @@
 import { Bell, LogOut, Activity, X } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { clearAuthSession } from '../auth/authStorage';
 
 export function DashboardHeader({ user, config, insights, onMarkAsRead }) {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ export function DashboardHeader({ user, config, insights, onMarkAsRead }) {
   }, []);
 
   const handleLogout = () => {
-    localStorage.clear();
+    clearAuthSession();
     navigate('/login');
   };
 

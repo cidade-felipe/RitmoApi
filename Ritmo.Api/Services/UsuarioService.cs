@@ -9,10 +9,12 @@ namespace Ritmo.Api.Services;
 public class UsuarioService
 {
     private readonly AppDbContext _context;
+    private readonly JwtTokenService _jwtTokenService;
 
-    public UsuarioService(AppDbContext context)
+    public UsuarioService(AppDbContext context, JwtTokenService jwtTokenService)
     {
         _context = context;
+        _jwtTokenService = jwtTokenService;
     }
 
     public async Task<IEnumerable<UsuarioResponse>> ListarTodos()
@@ -29,7 +31,7 @@ public class UsuarioService
         return usuario != null ? UsuarioResponse.FromEntity(usuario) : null;
     }
 
-    public async Task<UsuarioResponse?> Login(LoginRequest request)
+    public async Task<AuthResponse?> Login(LoginRequest request)
     {
         var emailNormalizado = request.Email.Trim().ToLowerInvariant();
         var usuario = await _context.Usuarios
@@ -46,7 +48,7 @@ public class UsuarioService
             await _context.SaveChangesAsync();
         }
 
-        return UsuarioResponse.FromEntity(usuario);
+        return CriarAuthResponse(usuario);
     }
 
     public async Task<UsuarioResponse?> Criar(UsuarioRequest request)
@@ -72,6 +74,18 @@ public class UsuarioService
         await _context.SaveChangesAsync();
 
         return UsuarioResponse.FromEntity(usuario);
+    }
+
+    public async Task<AuthResponse?> RegistrarComToken(UsuarioRequest request)
+    {
+        var usuario = await Criar(request);
+        if (usuario == null)
+        {
+            return null;
+        }
+
+        var entity = await _context.Usuarios.FindAsync(usuario.Id);
+        return entity == null ? null : CriarAuthResponse(entity);
     }
 
     public async Task<bool> Atualizar(int id, UsuarioRequest request)
@@ -101,5 +115,16 @@ public class UsuarioService
         await _context.SaveChangesAsync();
 
         return true;
+    }
+
+    private AuthResponse CriarAuthResponse(Usuario usuario)
+    {
+        var tokenData = _jwtTokenService.CreateToken(usuario);
+        return new AuthResponse
+        {
+            Token = tokenData.Token,
+            ExpiresAt = tokenData.ExpiresAt,
+            Usuario = UsuarioResponse.FromEntity(usuario)
+        };
     }
 }

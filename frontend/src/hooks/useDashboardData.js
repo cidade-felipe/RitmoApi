@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/apiClient';
+import { clearAuthSession, getLoggedUser } from '../auth/authStorage';
 
 export function useDashboardData() {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ export function useDashboardData() {
   const [biometria, setBiometria] = useState([]);
 
   const loadDashboard = useCallback(async () => {
-    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+    const usuarioLogado = getLoggedUser();
     if (!usuarioLogado) return navigate('/login');
     setUser(usuarioLogado);
 
@@ -35,6 +36,12 @@ export function useDashboardData() {
       setBiometria(biometriaFetch);
       setUser(userRefreshed);
     } catch (err) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        clearAuthSession();
+        navigate('/login');
+        return;
+      }
+
       console.error("Falha ao puxar os dados:", err);
     } finally {
       setLoading(false);

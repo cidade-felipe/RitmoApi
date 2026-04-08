@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Activity } from 'lucide-react';
 import apiClient from '../api/apiClient';
+import { saveAuthSession } from '../auth/authStorage';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ export default function Login() {
       if (isRegistering) {
         // POST /api/usuarios — cria novo usuário
         const response = await apiClient.post('/usuarios', formData);
-        localStorage.setItem('usuarioLogado', JSON.stringify({ id: response.id, nome: response.nome }));
+        saveAuthSession(response);
         navigate('/dashboard');
       } else {
         // POST /api/usuarios/login — valida email e senha no banco
@@ -31,7 +32,7 @@ export default function Login() {
           email: formData.email,
           senha: formData.senha
         });
-        localStorage.setItem('usuarioLogado', JSON.stringify({ id: response.id, nome: response.nome }));
+        saveAuthSession(response);
         navigate('/dashboard');
       }
     } catch (err) {

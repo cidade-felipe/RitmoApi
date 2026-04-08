@@ -1,14 +1,17 @@
 // Controllers/InsightsController.cs
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Ritmo.Api.Data;
 using Ritmo.Api.Models;
+using Ritmo.Api.Security;
 
 namespace Ritmo.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class InsightsController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -28,6 +31,9 @@ public class InsightsController : ControllerBase
         int usuarioId,
         [FromQuery] bool? apenasNaoLidos = null)
     {
+        if (usuarioId != User.GetAuthenticatedUserId())
+            return Forbid();
+
         var usuarioExiste = await _context.Usuarios.AnyAsync(u => u.Id == usuarioId);
         if (!usuarioExiste)
             return NotFound(new { mensagem = $"Usuário com ID {usuarioId} não encontrado." });
@@ -55,6 +61,9 @@ public class InsightsController : ControllerBase
         if (insight == null)
             return NotFound(new { mensagem = $"Insight com ID {id} não encontrado." });
 
+        if (insight.UsuarioId != User.GetAuthenticatedUserId())
+            return Forbid();
+
         return Ok(insight);
     }
 
@@ -73,6 +82,9 @@ public class InsightsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Insight>> PostInsight(Insight insight)
     {
+        if (insight.UsuarioId != User.GetAuthenticatedUserId())
+            return Forbid();
+
         var usuarioExiste = await _context.Usuarios.AnyAsync(u => u.Id == insight.UsuarioId);
         if (!usuarioExiste)
             return NotFound(new { mensagem = $"Usuário com ID {insight.UsuarioId} não encontrado." });
@@ -98,6 +110,9 @@ public class InsightsController : ControllerBase
         if (insight == null)
             return NotFound(new { mensagem = $"Insight com ID {id} não encontrado." });
 
+        if (insight.UsuarioId != User.GetAuthenticatedUserId())
+            return Forbid();
+
         insight.Lido = true;
         await _context.SaveChangesAsync();
 
@@ -113,6 +128,9 @@ public class InsightsController : ControllerBase
         var insight = await _context.Insights.FindAsync(id);
         if (insight == null)
             return NotFound(new { mensagem = $"Insight com ID {id} não encontrado." });
+
+        if (insight.UsuarioId != User.GetAuthenticatedUserId())
+            return Forbid();
 
         _context.Insights.Remove(insight);
         await _context.SaveChangesAsync();

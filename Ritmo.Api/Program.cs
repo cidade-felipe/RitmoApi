@@ -1,6 +1,10 @@
 // Program.cs
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Ritmo.Api.Data;
+using Ritmo.Api.Security;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
@@ -32,11 +36,42 @@ if (string.IsNullOrWhiteSpace(connectionString))
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+var jwtAudience = builder.Configuration["Jwt:Audience"];
+var jwtKey = builder.Configuration["Jwt:Key"];
+
+if (string.IsNullOrWhiteSpace(jwtIssuer) ||
+    string.IsNullOrWhiteSpace(jwtAudience) ||
+    string.IsNullOrWhiteSpace(jwtKey))
+{
+    throw new InvalidOperationException(
+        "As configurações JWT estão incompletas. Defina Jwt:Issuer, Jwt:Audience e Jwt:Key.");
+}
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true,
+            ValidateLifetime = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 // Serviços de Negócio (Desacoplados)
 builder.Services.AddScoped<Ritmo.Api.Services.RegistroDiarioService>();
 builder.Services.AddScoped<Ritmo.Api.Services.UsuarioService>();
 builder.Services.AddScoped<Ritmo.Api.Services.MetaService>();
 builder.Services.AddScoped<Ritmo.Api.Services.BiometriaService>();
+builder.Services.AddScoped<JwtTokenService>();
 
 // Adiciona o Swagger/OpenAPI — interface web para testar a API.
 // AddEndpointsApiExplorer() descobre os endpoints disponíveis.
@@ -85,6 +120,8 @@ if (app.Environment.IsDevelopment())
 // Ativa o CORS com a política que definimos acima.
 // IMPORTANTE: deve vir ANTES do MapControllers().
 app.UseCors("PermitirTudo");
+app.UseAuthentication();
+app.UseAuthorization();
 
 // Ativa o roteamento de requisições para os Controllers.
 // É aqui que o .NET olha para a URL da requisição e decide
