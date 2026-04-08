@@ -28,6 +28,14 @@ public class UsuarioService
         return usuario != null ? UsuarioResponse.FromEntity(usuario) : null;
     }
 
+    public async Task<UsuarioResponse?> Login(LoginRequest request)
+    {
+        var usuario = await _context.Usuarios
+            .FirstOrDefaultAsync(u => u.Email == request.Email && u.Senha == request.Senha);
+
+        return usuario != null ? UsuarioResponse.FromEntity(usuario) : null;
+    }
+
     public async Task<UsuarioResponse?> Criar(UsuarioRequest request)
     {
         var emailExistente = await _context.Usuarios

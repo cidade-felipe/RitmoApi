@@ -41,6 +41,16 @@ public class UsuariosController : ControllerBase
         return CreatedAtAction(nameof(GetUsuario), new { id = result.Id }, result);
     }
 
+    [HttpPost("login")]
+    public async Task<ActionResult<UsuarioResponse>> Login(LoginRequest request)
+    {
+        var result = await _service.Login(request);
+        if (result == null)
+            return Unauthorized(new { mensagem = "Email ou senha incorretos." });
+
+        return Ok(result);
+    }
+
     [HttpPut("{id}")]
     public async Task<IActionResult> PutUsuario(int id, UsuarioRequest usuario)
     {
