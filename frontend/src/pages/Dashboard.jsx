@@ -101,10 +101,12 @@ export default function Dashboard() {
   const getIMCCategory = (imc) => {
     if (!imc) return { label: 'Aguardando Dados', color: 'gray' };
     const val = parseFloat(imc);
-    if (val < 18.5) return { label: 'Abaixo do Peso', color: '#f1c40f' };
-    if (val < 25) return { label: 'Normal', color: '#2ecc71' };
+    if (val < 18.5) return { label: 'Abaixo do peso', color: '#f1c40f' };
+    if (val < 25) return { label: 'Peso normal', color: '#2ecc71' };
     if (val < 30) return { label: 'Sobrepeso', color: '#e67e22' };
-    return { label: 'Obeso', color: '#e74c3c' };
+    if (val < 35) return { label: 'Obesidade grau I', color: '#e74c3c' };
+    if (val < 40) return { label: 'Obesidade grau II', color: '#c0392b' };
+    return { label: 'Obesidade grau III', color: '#900C3F' };
   };
 
   const imcAtual = calculaIMC();
