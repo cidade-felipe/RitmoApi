@@ -101,10 +101,12 @@ export default function Dashboard() {
   const getIMCCategory = (imc) => {
     if (!imc) return { label: 'Aguardando Dados', color: 'gray' };
     const val = parseFloat(imc);
-    if (val < 18.5) return { label: 'Abaixo do Peso', color: '#f1c40f' };
-    if (val < 25) return { label: 'Normal', color: '#2ecc71' };
+    if (val < 18.5) return { label: 'Abaixo do peso', color: '#f1c40f' };
+    if (val < 25) return { label: 'Peso normal', color: '#2ecc71' };
     if (val < 30) return { label: 'Sobrepeso', color: '#e67e22' };
-    return { label: 'Obeso', color: '#e74c3c' };
+    if (val < 35) return { label: 'Obesidade grau I', color: '#e74c3c' };
+    if (val < 40) return { label: 'Obesidade grau II', color: '#c0392b' };
+    return { label: 'Obesidade grau III', color: '#900C3F' };
   };
 
   const imcAtual = calculaIMC();
@@ -112,6 +114,18 @@ export default function Dashboard() {
   const avgHumor = registros.length > 0 ? (registros.reduce((acc, r) => acc + r.humor, 0) / registros.length).toFixed(1) : '0';
   const avgAgua = registros.length > 0 ? (registros.reduce((acc, r) => acc + r.agua, 0) / registros.length).toFixed(1) : '0';
   const avgSono = registros.length > 0 ? (registros.reduce((acc, r) => acc + r.sono, 0) / registros.length).toFixed(1) : '0';
+
+  // Faixa de peso ideal: IMC saudável (18.5 a 24.9) aplicado à altura atual
+  const calcPesoIdeal = () => {
+    const altura = biometria[0]?.altura;
+    if (!altura) return null;
+    const alturaM = altura / 100;
+    return {
+      min: (18.5 * alturaM * alturaM).toFixed(1),
+      max: (24.9 * alturaM * alturaM).toFixed(1),
+    };
+  };
+  const pesoIdeal = calcPesoIdeal();
 
   const radarData = registros.length > 0 ? [
     { metric: 'Humor', value: Number(avgHumor) },
@@ -186,7 +200,7 @@ export default function Dashboard() {
           <div className="tab-content">
             {activeTab === 'panorama' && (
               <>
-                <StatsCards imc={imcAtual} imcMeta={imcMeta} pesoAtual={biometria[0]?.peso} pesoAnterior={biometria[1]?.peso} avgHumor={avgHumor} avgSono={avgSono} avgAgua={avgAgua} />
+                <StatsCards imc={imcAtual} imcMeta={imcMeta} pesoAtual={biometria[0]?.peso} pesoAnterior={biometria[1]?.peso} pesoIdeal={pesoIdeal} avgHumor={avgHumor} avgSono={avgSono} avgAgua={avgAgua} />
                 <ChartsContainer type="panorama" data={registros} radarData={radarData} />
               </>
             )}
