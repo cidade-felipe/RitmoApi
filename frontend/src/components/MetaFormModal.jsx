@@ -18,6 +18,7 @@ export function MetaFormModal({ isOpen, onClose, onSave, user }) {
       case 'Sono': return { min: 0, max: 24, step: 0.5, unit: 'h' };
       case 'Agua': return { min: 0, max: 25, step: 0.1, unit: 'L' };
       case 'Treino': return { min: 1, max: 7, step: 1, unit: 'dias' };
+      case 'Peso': return { min: 10, max: 600, step: 0.1, unit: 'kg' };
       default: return { min: 1, max: 5, step: 0.1, unit: 'pontos' };
     }
   };
@@ -72,6 +73,7 @@ export function MetaFormModal({ isOpen, onClose, onSave, user }) {
               <option value="Humor">Bem-estar Mental (Média 1-5)</option>
               <option value="Produtividade">Foco e Entrega (Média 1-5)</option>
               <option value="Energia">Nível de Vitalidade (Média 1-5)</option>
+              <option value="Peso">Peso Corporal (kg)</option>
               <option value="Treino">Consistência de Treino (Dias p/ Semana)</option>
             </select>
           </div>
