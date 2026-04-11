@@ -160,10 +160,49 @@ export default function Dashboard() {
     seteDiasAtras.setDate(hoje.getDate() - 7);
 
     const registrosRecentes = registros.filter(r => new Date(r.data) >= seteDiasAtras);
-    if (registrosRecentes.length === 0) return { percent: 0, current: 0, status: 'atrasado' };
-
     let total = 0;
     const cat = meta.categoria.toLowerCase();
+
+    if (cat === 'peso') {
+      const medidasOrdenadas = [...biometria]
+        .filter(item => item.peso)
+        .sort((a, b) => new Date(a.data) - new Date(b.data));
+
+      if (medidasOrdenadas.length === 0) {
+        return { percent: 0, current: 0, status: 'atrasado', unit: 'kg', currentLabel: 'Peso atual' };
+      }
+
+      const dataInicioMeta = new Date(`${meta.dataInicio}T00:00:00`);
+      const medidasDesdeInicio = medidasOrdenadas.filter(item => new Date(item.data) >= dataInicioMeta);
+      const baseline = medidasDesdeInicio[0] || medidasOrdenadas[0];
+      const atual = medidasOrdenadas[medidasOrdenadas.length - 1];
+
+      const distanciaInicial = Math.abs(Number(baseline.peso) - Number(meta.valorAlvo));
+      const distanciaAtual = Math.abs(Number(atual.peso) - Number(meta.valorAlvo));
+
+      let progresso = 0;
+      if (distanciaInicial === 0) {
+        progresso = 100;
+      } else {
+        progresso = ((distanciaInicial - distanciaAtual) / distanciaInicial) * 100;
+      }
+
+      if (distanciaAtual <= 0.5) {
+        progresso = 100;
+      }
+
+      return {
+        percent: Math.max(0, Math.min(Math.round(progresso), 100)),
+        current: Number(atual.peso).toFixed(1),
+        status: distanciaAtual <= 0.5 ? 'concluido' : distanciaAtual <= 2 ? 'em_dia' : 'atrasado',
+        unit: 'kg',
+        currentLabel: 'Peso atual'
+      };
+    }
+
+    if (registrosRecentes.length === 0) {
+      return { percent: 0, current: 0, status: 'atrasado', unit: cat === 'treino' ? 'dias' : '', currentLabel: 'Sua média (7d)' };
+    }
 
     if (cat === 'treino') {
       total = registrosRecentes.filter(r => r.exercicio).length;
@@ -175,7 +214,9 @@ export default function Dashboard() {
     return {
       percent: Math.min(Math.round(progresso), 120),
       current: total.toFixed(1),
-      status: progresso >= 100 ? 'concluido' : progresso >= 50 ? 'em_dia' : 'atrasado'
+      status: progresso >= 100 ? 'concluido' : progresso >= 50 ? 'em_dia' : 'atrasado',
+      unit: cat === 'treino' ? 'dias' : '',
+      currentLabel: 'Sua média (7d)'
     };
   };
 
@@ -257,6 +298,7 @@ export default function Dashboard() {
                     {metas.map(meta => {
                       const prog = getMetaProgress(meta);
                       const isTreino = meta.categoria.toLowerCase() === 'treino';
+                      const isPeso = meta.categoria.toLowerCase() === 'peso';
                       const color = prog.status === 'concluido' ? '#2ecc71' : prog.status === 'em_dia' ? 'var(--accent-cyan)' : '#f1c40f';
                       
                       return (
@@ -277,8 +319,8 @@ export default function Dashboard() {
 
                           <div className="goal-progress-wrapper">
                             <div className="progress-info">
-                              <span>Sua média (7d): <strong>{prog.current}{isTreino ? ' dias' : ''}</strong></span>
-                              <span>Meta: {meta.valorAlvo}{isTreino ? ' dias' : ''}</span>
+                              <span>{prog.currentLabel}: <strong>{prog.current}{prog.unit ? ` ${prog.unit}` : ''}</strong></span>
+                              <span>Meta: {meta.valorAlvo}{isTreino || isPeso ? ` ${prog.unit}` : ''}</span>
                             </div>
                             <div className="progress-track">
                               <div 
@@ -288,7 +330,7 @@ export default function Dashboard() {
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
                               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: color }}>
-                                {prog.percent}% {prog.percent >= 100 ? 'CONCLUÍDO!' : 'EM ANDAMENTO'}
+                                {prog.percent}% {prog.percent >= 100 ? 'CONCLUÍDO!' : isPeso ? 'APROXIMANDO DO ALVO' : 'EM ANDAMENTO'}
                               </span>
                               <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>
                                 Atualizado agora

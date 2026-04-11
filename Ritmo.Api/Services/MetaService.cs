@@ -97,6 +97,7 @@ public class MetaService
             "Sono" => (0.5m, 24m),
             "Agua" => (0.1m, 25m),
             "Treino" => (1m, 7m),
+            "Peso" => (10m, 600m),
             "Humor" or "Produtividade" or "Energia" => (1m, 5m),
             _ => throw new DomainValidationException("Categoria de meta inválida.")
         };
