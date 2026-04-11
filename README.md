@@ -1,206 +1,269 @@
-# Ritmo (Personal Analytics Dashboard)
+# Ritmo
 
-Esse é um repositório para o trabalho da matéria Desenvolvimento Web, do curso de TIC da UFSC de Araranguá.
-**Aluno**: Felipe Cidade Soares
+Sistema web de análise pessoal, desenvolvido como projeto da disciplina de Desenvolvimento Web do curso de TIC da UFSC Araranguá.
+
+**Aluno**: Felipe Cidade Soares  
 **Professor**: Matheus Cataneo
 
----
+## Visão geral
 
-## 💡 Ideia do Projeto
+O Ritmo permite registrar dados do dia a dia, como sono, humor, produtividade, energia, água, exercício e biometria, para transformar isso em uma visão analítica da rotina.
 
-**Dashboard de Vida Pessoal (Personal Analytics Dashboard)**
+Hoje o projeto já funciona como um MVP full stack com:
 
-Um sistema web que permite ao usuário registrar dados do dia a dia (sono, humor, produtividade, etc.) e transformar isso em **visualizações e insights inteligentes** sobre sua rotina.
+- backend em .NET 8
+- frontend em React + Vite
+- banco PostgreSQL
+- autenticação JWT
+- biometria histórica com peso, altura e IMC
+- metas comportamentais e biométricas
+- gráficos, cards e relatórios
 
-O foco não é só armazenar dados, mas **analisar comportamento e gerar valor a partir deles**.
+## Stack
 
----
+### Backend
 
-## 🎯 Objetivo
+- ASP.NET Core Web API
+- Entity Framework Core 8
+- Npgsql
+- Swagger
+- JWT Bearer Authentication
 
-Ajudar o usuário a entender padrões da própria vida, respondendo coisas como:
+### Frontend
 
-* Quando sou mais produtivo?
-* Dormir melhor realmente melhora meu humor?
-* Em quais dias da semana eu rendo mais?
+- React
+- Vite
+- Axios
+- Recharts
+- XLSX
 
----
+## Funcionalidades implementadas
 
-## 🧠 Diferencial do Projeto
+### Autenticação e usuário
 
-* Não é só um “habit tracker”
-* Gera **insights automáticos**
-* Tem cara de produto real, não só trabalho acadêmico
-* Conecta bem com dados, BI e análise
+- cadastro de usuário com nome, email, data de nascimento e sexo biológico
+- login com JWT
+- senhas armazenadas com hash
+- proteção de rotas por usuário autenticado
 
----
+### Registro diário
 
-## 🧩 Funcionalidades Principais
+- humor
+- sono
+- produtividade
+- energia
+- exercício
+- água
+- observações
 
-### 1. Registro Diário
+O registro diário usa lógica de upsert por data. Se o usuário salvar novamente o mesmo dia, o backend atualiza o registro existente.
 
-Usuário preenche dados do dia, por exemplo:
+### Biometria
 
-* Humor (escala 1-5)
-* Horas de sono (decimal)
-* Produtividade (1 a 5)
-* Energia
-* Exercício físico (sim/não)
-* Água consumida
-* Observações (texto livre)
+- peso
+- altura
+- IMC calculado no backend
+- classificação e cor da faixa de IMC
+- histórico consolidado por dia
 
----
+Se o usuário registrar biometria mais de uma vez no mesmo dia, a API atualiza o valor do dia em vez de criar duplicidade lógica.
 
-### 2. Dashboard Geral
+### Metas
 
-Visão rápida da rotina com:
+Categorias suportadas atualmente:
 
-* Média de sono
-* Média de humor
-* Total de horas estudadas
-* Dias produtivos
-* Comparação com semana anterior
+- Sono
+- Agua
+- Humor
+- Produtividade
+- Energia
+- Treino
+- Peso
 
----
+O progresso das metas funciona assim:
 
-### 3. Visualizações (Gráficos)
+- hábitos diários, como sono e água, usam média recente
+- treino usa contagem de dias com exercício
+- peso usa aproximação do alvo, funcionando tanto para perda quanto para ganho de peso
 
-* Evolução do humor ao longo do tempo
-* Horas de estudo por dia
-* Sono vs produtividade
-* Produtividade por dia da semana
+### Dashboard
 
----
+- cards de resumo
+- gráficos de panorama
+- gráficos de análise
+- histórico tabular
+- exportação CSV e Excel
 
-### 4. Insights Automáticos
+## Segurança e robustez já adicionadas
 
-Mensagens geradas pelo sistema, por exemplo:
+- hash de senha no backend
+- autenticação JWT
+- autorização por dono do recurso
+- CORS configurável por origem
+- validações com DataAnnotations
+- validações semânticas de domínio
+- `appsettings.Local.json` para configuração local fora do Git
+- `AppDbContextFactory` para `dotnet ef`
 
-* “Você foi mais produtivo nas quartas e quintas”
-* “Seu humor cai quando você dorme menos de 6h”
-* “Você estudou mais esta semana do que na anterior”
+## Estrutura do projeto
 
-Baseado em regras simples e análise de dados (não precisa IA pesada)
+```text
+RitmoApi/
+  Ritmo.Api/     -> backend .NET 8
+  frontend/      -> frontend React + Vite
+  Backup/        -> cópias de segurança criadas durante alterações
+```
 
----
+## Como rodar localmente
 
-## 🖥️ Estrutura do Sistema
+### 1. Banco
 
-### Frontend (React)
+O projeto usa PostgreSQL. Configure uma base local, por exemplo `ritmodb`.
 
-Páginas principais:
+### 2. Configuração local do backend
 
-* Login / cadastro
-* Dashboard
-* Registro diário
-* Histórico
-* Perfil
+Crie ou ajuste o arquivo `Ritmo.Api/appsettings.Local.json` com:
 
-Tecnologias sugeridas:
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=ritmodb;Username=postgres;Password=SUA_SENHA"
+  },
+  "Jwt": {
+    "Issuer": "Ritmo.Api",
+    "Audience": "Ritmo.Frontend",
+    "Key": "uma-chave-longa-com-pelo-menos-32-caracteres",
+    "ExpirationMinutes": 120
+  },
+  "Cors": {
+    "AllowedOrigins": [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173"
+    ]
+  }
+}
+```
 
-* React + hooks
-* Recharts ou Chart.js
-* UI clean com cards e gráficos
+Esse arquivo é ignorado pelo Git.
 
----
+### 3. Aplicar migrations
 
-### Backend (.NET 8)
+```powershell
+dotnet ef database update --project Ritmo.Api
+```
 
-API REST com:
+### 4. Rodar o backend
 
-* CRUD de usuários
-* CRUD de registros diários
-* CRUD de metas
-* Geração e consulta de insights
-* Swagger em `http://localhost:5066/swagger`
+```powershell
+dotnet run --project Ritmo.Api
+```
 
----
+Swagger:
 
-### Banco de Dados (PostgreSQL)
+```text
+http://localhost:5066/swagger
+```
 
-**Usuario**
+### 5. Rodar o frontend
 
-| Campo | Tipo | Obs |
-|---|---|---|
-| Id | int PK | |
-| Nome | string | |
-| Email | string | único |
-| Senha | string | |
-| DataCriacao | DateTime | |
-| (Removido) | - | Altura movida para Biometria |
+```powershell
+cd frontend
+npm install
+npm run dev
+```
 
-**RegistroDiario**
+Frontend:
 
-| Campo | Tipo | Obs |
-|---|---|---|
-| Id | int PK | |
-| UsuarioId | int FK | cascade delete |
-| Data | DateOnly | |
-| Humor | int | 1–5 |
-| Sono | decimal | horas |
-| (Removido) | - | Campo Estudo desativado |
-| Produtividade | int | 1–5 |
-| Energia | int | 1–5 |
-| Exercicio | bool | |
-| Agua | decimal | litros |
-| Observacoes | string? | |
+```text
+http://localhost:5173
+```
 
-**MedidaBiometrica (Unificada)**
+## Modelo de dados
 
-| Campo | Tipo | Obs |
-|---|---|---|
-| Id | int PK | |
-| UsuarioId | int FK | cascade delete |
-| Peso | decimal | peso em kg |
-| Altura | int | altura em cm |
-| IMC | (Cálculo) | Calculado via DTO (API) |
-| Data | DateTime | snapshot do momento |
+### Usuario
 
-**Meta**
+- Id
+- Nome
+- Email
+- Senha
+- DataCriacao
+- DataNascimento
+- Sexo
 
-| Campo | Tipo | Obs |
-|---|---|---|
-| Id | int PK | |
-| UsuarioId | int FK | cascade delete |
-| Categoria | string | ex: "Sono", "Estudo" |
-| ValorAlvo | decimal | ex: 7.5 horas |
-| Descricao | string? | |
-| DataInicio | DateOnly | |
-| DataFim | DateOnly? | null = sem prazo |
-| Ativa | bool | pode desativar sem deletar |
+### RegistroDiario
 
-**Insight**
+- Id
+- UsuarioId
+- Data
+- Humor
+- Sono
+- Produtividade
+- Energia
+- Exercicio
+- Agua
+- Observacoes
+- DataCriacao
 
-| Campo | Tipo | Obs |
-|---|---|---|
-| Id | int PK | |
-| UsuarioId | int FK | cascade delete |
-| Mensagem | string | texto para o frontend |
-| Categoria | string | ex: "Produtividade" |
-| Nivel | string | "info", "positivo", "atencao" |
-| DataGeracao | DateTime | |
-| Lido | bool | controla badge de não lidos |
+### MedidaBiometrica
 
----
+- Id
+- UsuarioId
+- Peso
+- Altura
+- Data
 
-## 🔄 Fluxo do Sistema
+### Meta
 
-1. Usuário se cadastra/loga
-2. Registra dados do dia (`RegistroDiario`)
-3. Define metas (`Meta`) para acompanhar seu desempenho
-4. Backend gera e salva `Insights` com base nos registros
-5. Dashboard exibe gráficos, compara metas vs real e mostra insights
+- Id
+- UsuarioId
+- Categoria
+- ValorAlvo
+- Descricao
+- DataInicio
+- DataFim
+- Ativa
+- DataCriacao
 
----
+### Insight
 
----
+- Id
+- UsuarioId
+- Mensagem
+- Categoria
+- Nivel
+- DataGeracao
+- Lido
 
-## 🆕 Unificação Biométrica & Refinamento Analítico
+### ConfiguracaoPerfil
 
-O Ritmo atingiu um novo patamar de coesão técnica com a última atualização de arquitetura:
+- Id
+- UsuarioId
+- TemaEscuro
+- Idioma
+- FusoHorario
+- ReceberNotificacoes
+- ReceberRelatorioSemanal
+- ExibirMetaNoDashboard
 
-*   **Biometria Centralizada**: Peso e Altura agora viajam juntos na entidade `MedidaBiometrica`. Isso permite que o sistema mantenha um histórico real da evolução física do usuário, ideal para quem está em processos de mudança corporal.
-*   **Inteligência no Backend**: O cálculo de **IMC** foi movido para a camada de serviço da API. O frontend apenas exibe o valor pronto, garantindo que a regra de negócio seja única e imune a erros de arredondamento no cliente.
-*   **UI Resiliente**: O Dashboard agora é "à prova de falhas", com proteções (optional chaining e guards) que garantem carregamentos fluidos mesmo em conexões instáveis.
-*   **Limpeza de Escopo**: Removemos métricas que dispersavam o foco (como o campo Estudo), consolidando o Ritmo como uma ferramenta de **Bem-estar e Saúde Comportamental**.
-*   **Base de Dados Única**: Migração oficial concluída para o schema `ritmodb`, com suporte total a `DeleteBehavior.Cascade` para garantir a higienização dos dados do usuário.
+## Estado atual do produto
+
+**Fato**
+
+O projeto já tem fluxo real ponta a ponta, autenticação, persistência, histórico biométrico e dashboard funcional.
+
+**Inferência**
+
+Ele está acima de um protótipo vazio, mas ainda abaixo de um sistema pronto para produção.
+
+**Principais pontos ainda pendentes**
+
+- refresh token
+- rate limiting no login
+- tratamento de erro mais amigável no frontend
+- testes automatizados
+- pipeline CI/CD
+- observabilidade
+
+## Observação sobre insights
+
+O sistema possui entidade, endpoints e interface para insights, mas a geração automática ainda não está consolidada como motor analítico completo no backend. A documentação anterior dava essa funcionalidade como pronta, o que hoje seria impreciso.
