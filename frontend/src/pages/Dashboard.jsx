@@ -25,6 +25,10 @@ export default function Dashboard() {
     humor: 3, sono: 8, produtividade: 3, energia: 3, exercicio: false, agua: 2.0, observacoes: '', peso: '', altura: ''
   });
 
+  const getDateKey = (value) => String(value ?? '').split('T')[0];
+
+  const findBiometriaByDate = (date) => biometria.find((item) => getDateKey(item.data) === getDateKey(date));
+
   // --- Handlers de Ações ---
   const handleSalvar = async (e) => {
     e.preventDefault();
@@ -36,11 +40,14 @@ export default function Dashboard() {
         await apiClient.post('/registrosdiarios', payload);
       }
 
-      if (formData.peso && formData.altura) {
+      const biometriaDoDia = findBiometriaByDate(formData.data);
+      const alturaParaBiometria = formData.altura || biometriaDoDia?.altura || biometria[0]?.altura;
+
+      if (formData.peso && alturaParaBiometria) {
         await apiClient.post('/biometria', { 
           usuarioId: user.id, 
           peso: parseFloat(formData.peso), 
-          altura: parseInt(formData.altura),
+          altura: parseInt(alturaParaBiometria, 10),
           data: formData.data 
         });
       }
@@ -53,8 +60,15 @@ export default function Dashboard() {
   };
 
   const handleEditar = (registro) => {
+    const biometriaDoDia = findBiometriaByDate(registro.data);
+
     setEditandoId(registro.id);
-    setFormData({ ...registro, observacoes: registro.observacoes || '' });
+    setFormData({
+      ...registro,
+      observacoes: registro.observacoes || '',
+      peso: biometriaDoDia?.peso?.toString() || '',
+      altura: biometriaDoDia?.altura?.toString() || biometria[0]?.altura?.toString() || ''
+    });
     setIsModalOpen(true);
   };
 
