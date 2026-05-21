@@ -603,15 +603,17 @@ A geração automática inicial acontece quando o usuário salva registro diári
 - metas de hábito atingidas pela média dos últimos 7 dias
 - meta de treino atingida pela contagem de dias com exercício nos últimos 7 dias
 - meta de peso atingida conforme direção da meta: reduzir, ganhar ou manter
-- peso dentro da faixa saudável pelo IMC
+- entrada na faixa saudável/adequada pelo IMC, usando a mesma classificação exibida na interface
 - perfil atualizado com sucesso
 - senha atualizada com alerta de segurança
 
 Para metas de hábito e treino, `DataInicio` define se a meta já está ativa, mas a conclusão é avaliada pela janela móvel dos últimos 7 dias. Isso mantém o sino coerente com o card de metas, que também mostra `Sua média (7d)`.
 
+Para IMC, o backend centraliza a classificação em `ImcClassifier`. Assim, a notificação de IMC correto respeita a regra de adultos e idosos e usa IMC arredondado em 1 casa, igual à interface. A biometria informa ao motor se a última medida anterior já estava saudável. Se antes não estava e agora entrou na faixa correta, o backend cria uma notificação nova mesmo que exista um aviso parecido já lido no mesmo dia; se já estava saudável antes, ele não recria o aviso a cada salvamento.
+
 O sistema respeita `ReceberNotificacoes`. Se a preferência estiver desativada, novos insights automáticos não são gerados.
 
-Para evitar spam, o backend não duplica a mesma mensagem para o mesmo usuário dentro do mesmo dia.
+Para evitar spam, o backend não duplica a mesma mensagem para o mesmo usuário dentro do mesmo dia. Em eventos de transição, como chegar na faixa correta de IMC, a deduplicação considera notificações não lidas para não esconder um novo aviso por causa de um alerta antigo já fechado pelo usuário.
 
 ## 9.4. Relatórios
 
