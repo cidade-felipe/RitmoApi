@@ -1544,7 +1544,7 @@ Backend:
 DTO:
 
 - `MedidaBiometricaResponse.FromEntity`
-- calcula IMC:
+- calcula IMC usando `ImcClassifier`:
 
 ```text
 IMC = peso / (alturaEmMetros ^ 2)
@@ -1567,6 +1567,8 @@ Classificacao:
 ### Opiniao tecnica
 
 Calcular IMC no backend e decisao boa, porque evita divergencia entre telas e clientes. O frontend consome IMC ja pronto.
+
+`InsightNotificationService` tambem usa `ImcClassifier` para notificar IMC correto. Isso evita divergencia entre o que a tela chama de `Peso normal`/`Peso adequado` e o que o sino entende como faixa correta. A biometria calcula se a ultima medida anterior ja estava saudavel e passa esse estado para o motor de notificacoes. Com isso, o aviso de IMC aparece quando o usuario entra na faixa correta, mas nao reaparece em todo salvamento se ele ja estava saudavel. Quando a entrada na faixa correta acontece de novo no mesmo dia, a deduplicacao olha apenas avisos nao lidos para nao esconder a nova notificacao por causa de um aviso antigo que o usuario ja fechou.
 
 Risco:
 
@@ -1654,9 +1656,9 @@ Backend:
 Fato:
 
 - Existe um motor automatico inicial de insights no backend.
-- O motor atual cobre metas atingidas, metas de peso atingidas, peso dentro da faixa saudavel por IMC, atualizacao de perfil e troca de senha.
+- O motor atual cobre metas atingidas, metas de peso atingidas, entrada na faixa saudavel/adequada por IMC, atualizacao de perfil e troca de senha.
 - A geracao respeita `ReceberNotificacoes`.
-- A mesma mensagem nao e duplicada para o mesmo usuario dentro do mesmo dia.
+- A mesma mensagem nao e duplicada para o mesmo usuario dentro do mesmo dia. Para IMC, quando ha transicao de fora para dentro da faixa correta, a deduplicacao considera apenas avisos nao lidos para uma notificacao fechada nao bloquear um novo evento real.
 - Para metas de habito e treino, `DataInicio` define se a meta esta ativa, mas o calculo de conclusao usa os ultimos 7 dias, igual ao card de metas do frontend.
 
 Inferencia:

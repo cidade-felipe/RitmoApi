@@ -62,6 +62,9 @@ public class BiometriaService
             .ToListAsync();
 
         var medidaExistente = medidasDoDia.FirstOrDefault();
+        var imcEstavaSaudavelAntes = medidaExistente != null
+            ? ObterImcSaudavel(medidaExistente, usuario.DataNascimento)
+            : await ObterImcSaudavelDaUltimaMedidaAsync(dto.UsuarioId, usuario.DataNascimento);
 
         if (medidaExistente != null)
         {
@@ -75,7 +78,7 @@ public class BiometriaService
             }
 
             await _context.SaveChangesAsync();
-            await _insightNotificationService.GerarAvisosDeProgressoAsync(dto.UsuarioId);
+            await _insightNotificationService.GerarAvisosDeProgressoAsync(dto.UsuarioId, imcEstavaSaudavelAntes);
 
             return MedidaBiometricaResponse.FromEntity(medidaExistente, usuario.DataNascimento);
         }
@@ -83,7 +86,7 @@ public class BiometriaService
         var novaMedida = dto.ToEntity();
         _context.MedidasBiometricas.Add(novaMedida);
         await _context.SaveChangesAsync();
-        await _insightNotificationService.GerarAvisosDeProgressoAsync(dto.UsuarioId);
+        await _insightNotificationService.GerarAvisosDeProgressoAsync(dto.UsuarioId, imcEstavaSaudavelAntes);
 
         return MedidaBiometricaResponse.FromEntity(novaMedida, usuario.DataNascimento);
     }
@@ -111,5 +114,29 @@ public class BiometriaService
         {
             throw new DomainValidationException("Data da biometria não pode ser anterior ao nascimento do usuário.");
         }
+    }
+
+    private async Task<bool?> ObterImcSaudavelDaUltimaMedidaAsync(int usuarioId, DateOnly dataNascimento)
+    {
+        var ultimaMedida = await _context.MedidasBiometricas
+            .Where(medida => medida.UsuarioId == usuarioId)
+            .OrderByDescending(medida => medida.Data)
+            .ThenByDescending(medida => medida.Id)
+            .FirstOrDefaultAsync();
+
+        if (ultimaMedida == null || ultimaMedida.Altura <= 0)
+        {
+            return null;
+        }
+
+        return ObterImcSaudavel(ultimaMedida, dataNascimento);
+    }
+
+    private static bool ObterImcSaudavel(MedidaBiometrica medida, DateOnly dataNascimento)
+    {
+        var imc = ImcClassifier.Calcular(medida.Peso, medida.Altura);
+        var idade = ImcClassifier.CalcularIdade(dataNascimento);
+
+        return ImcClassifier.Classificar(imc, idade).Saudavel;
     }
 }

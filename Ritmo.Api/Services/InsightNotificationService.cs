@@ -44,7 +44,7 @@ public class InsightNotificationService
         await _context.SaveChangesAsync();
     }
 
-    public async Task GerarAvisosDeProgressoAsync(int usuarioId)
+    public async Task GerarAvisosDeProgressoAsync(int usuarioId, bool? imcEstavaSaudavelAntes = null)
     {
         if (!await UsuarioRecebeNotificacoes(usuarioId))
         {
@@ -63,7 +63,7 @@ public class InsightNotificationService
 
         if (metasAtivas.Count == 0)
         {
-            await GerarAvisoPesoSaudavelAsync(usuarioId);
+            await GerarAvisoPesoSaudavelAsync(usuarioId, imcEstavaSaudavelAntes);
             await _context.SaveChangesAsync();
             return;
         }
@@ -90,7 +90,7 @@ public class InsightNotificationService
         }
 
         await GerarAvisosPesoAsync(usuarioId, metasAtivas.Where(meta => meta.Categoria == "Peso").ToList());
-        await GerarAvisoPesoSaudavelAsync(usuarioId);
+        await GerarAvisoPesoSaudavelAsync(usuarioId, imcEstavaSaudavelAntes);
         await _context.SaveChangesAsync();
     }
 
@@ -219,44 +219,69 @@ public class InsightNotificationService
         return "manter";
     }
 
-    private async Task GerarAvisoPesoSaudavelAsync(int usuarioId)
+    private async Task GerarAvisoPesoSaudavelAsync(int usuarioId, bool? imcEstavaSaudavelAntes = null)
     {
         var medidaAtual = await _context.MedidasBiometricas
+            .Include(medida => medida.Usuario)
             .Where(medida => medida.UsuarioId == usuarioId)
             .OrderByDescending(medida => medida.Data)
             .ThenByDescending(medida => medida.Id)
             .FirstOrDefaultAsync();
 
-        if (medidaAtual == null || medidaAtual.Altura <= 0)
+        if (medidaAtual == null || medidaAtual.Altura <= 0 || medidaAtual.Usuario == null)
         {
             return;
         }
 
-        var alturaM = medidaAtual.Altura / 100m;
-        var imc = medidaAtual.Peso / (alturaM * alturaM);
+        var imc = ImcClassifier.Calcular(medidaAtual.Peso, medidaAtual.Altura);
+        var idade = ImcClassifier.CalcularIdade(medidaAtual.Usuario.DataNascimento);
+        var classificacaoImc = ImcClassifier.Classificar(imc, idade);
 
-        if (imc < 18.5m || imc > 24.9m)
+        if (!classificacaoImc.Saudavel)
         {
             return;
         }
 
+        if (imcEstavaSaudavelAntes == true)
+        {
+            return;
+        }
+
+        var faixa = classificacaoImc.Classificacao == "Peso adequado" ? "adequada" : "saudável";
+        var prefixoDedupe = "Você chegou na faixa de peso";
         var mensagem =
-            $"Você está dentro da faixa de peso saudável pelo IMC: {FormatarDecimal(imc)}.";
-        await AdicionarInsightDoDiaSeAindaNaoExiste(usuarioId, "Peso", "positivo", mensagem);
+            $"{prefixoDedupe} {faixa} pelo IMC: {FormatarDecimal(imc)} ({classificacaoImc.Classificacao}).";
+        await AdicionarInsightDoDiaSeAindaNaoExiste(
+            usuarioId,
+            "Peso",
+            "positivo",
+            mensagem,
+            prefixoDedupe,
+            deduplicarApenasNaoLidos: imcEstavaSaudavelAntes == false);
     }
 
     private async Task AdicionarInsightDoDiaSeAindaNaoExiste(
         int usuarioId,
         string categoria,
         string nivel,
-        string mensagem)
+        string mensagem,
+        string? prefixoDedupe = null,
+        bool deduplicarApenasNaoLidos = false)
     {
         var inicioDoDiaUtc = DateTime.UtcNow.Date;
-        var jaExisteHoje = await _context.Insights.AnyAsync(insight =>
+        var insightsDoDia = _context.Insights.Where(insight =>
             insight.UsuarioId == usuarioId &&
             insight.Categoria == categoria &&
-            insight.Mensagem == mensagem &&
             insight.DataGeracao >= inicioDoDiaUtc);
+
+        if (deduplicarApenasNaoLidos)
+        {
+            insightsDoDia = insightsDoDia.Where(insight => !insight.Lido);
+        }
+
+        var jaExisteHoje = prefixoDedupe == null
+            ? await insightsDoDia.AnyAsync(insight => insight.Mensagem == mensagem)
+            : await insightsDoDia.AnyAsync(insight => insight.Mensagem.StartsWith(prefixoDedupe));
 
         if (jaExisteHoje)
         {
