@@ -1660,6 +1660,7 @@ Fato:
 - A geracao respeita `ReceberNotificacoes`.
 - A mesma mensagem nao e duplicada para o mesmo usuario dentro do mesmo dia. Para IMC, quando ha transicao de fora para dentro da faixa correta, a deduplicacao considera apenas avisos nao lidos para uma notificacao fechada nao bloquear um novo evento real.
 - Para perfil e senha, a deduplicacao tambem considera apenas avisos nao lidos. Perfil e senha sao eventos de acao direta do usuario, entao uma nova atualizacao deve voltar ao sino se o aviso anterior ja foi fechado.
+- Para metas, `RegistroDiarioService`, `BiometriaService` e `MetaService` consultam `ObterEstadoAtualDasMetasAsync` antes de salvar. Depois do save, `GerarAvisosDeProgressoAsync` compara o estado anterior com o estado atual. Se a meta estava pendente e passou a atingida, gera aviso novo usando deduplicacao apenas contra avisos nao lidos; se ja estava atingida, nao recria aviso a cada salvamento.
 - Para metas de habito e treino, `DataInicio` define se a meta esta ativa, mas o calculo de conclusao usa os ultimos 7 dias, igual ao card de metas do frontend.
 
 Inferencia:
