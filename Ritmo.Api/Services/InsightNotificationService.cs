@@ -25,7 +25,8 @@ public class InsightNotificationService
             usuarioId,
             "Conta",
             "info",
-            "Seu perfil foi atualizado com sucesso. Confira se nome, email e dados demográficos estão corretos.");
+            "Seu perfil foi atualizado com sucesso. Confira se nome, email e dados demográficos estão corretos.",
+            deduplicarApenasNaoLidos: true);
         await _context.SaveChangesAsync();
     }
 
@@ -40,7 +41,8 @@ public class InsightNotificationService
             usuarioId,
             "Segurança",
             "atencao",
-            "Sua senha foi alterada. Se não foi você, troque a senha novamente e revise sua conta.");
+            "Sua senha foi alterada. Se não foi você, troque a senha novamente e revise sua conta.",
+            deduplicarApenasNaoLidos: true);
         await _context.SaveChangesAsync();
     }
 
