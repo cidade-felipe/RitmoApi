@@ -609,6 +609,8 @@ A geração automática inicial acontece quando o usuário salva registro diári
 
 Para metas de hábito e treino, `DataInicio` define se a meta já está ativa, mas a conclusão é avaliada pela janela móvel dos últimos 7 dias. Isso mantém o sino coerente com o card de metas, que também mostra `Sua média (7d)`.
 
+Para metas, o backend captura o estado antes da alteração que disparou o recálculo. Se a meta já estava atingida antes, o sistema não recria o aviso a cada salvamento. Se ela estava pendente e passa a ficar atingida, uma nova notificação é criada mesmo que um aviso parecido já tenha sido marcado como lido no mesmo dia. Essa regra vale para metas de hábito, treino e peso.
+
 Para IMC, o backend centraliza a classificação em `ImcClassifier`. Assim, a notificação de IMC correto respeita a regra de adultos e idosos e usa IMC arredondado em 1 casa, igual à interface. A biometria informa ao motor se a última medida anterior já estava saudável. Se antes não estava e agora entrou na faixa correta, o backend cria uma notificação nova mesmo que exista um aviso parecido já lido no mesmo dia; se já estava saudável antes, ele não recria o aviso a cada salvamento.
 
 Para perfil e senha, a deduplicação considera apenas notificações não lidas. Isso garante que uma nova atualização real volte a aparecer no sino mesmo que o usuário já tenha fechado um aviso anterior no mesmo dia, sem duplicar enquanto um aviso idêntico ainda estiver pendente.

@@ -45,6 +45,7 @@ public class RegistroDiarioService
     public async Task<RegistroDiarioResponse> UpsertRegistro(RegistroDiarioRequest dto)
     {
         await ValidateRegistro(dto);
+        var metasAtingidasAntes = await _insightNotificationService.ObterEstadoAtualDasMetasAsync(dto.UsuarioId);
 
         // Lógica de "Um registro por dia" (Upsert)
         var registroExistente = await _context.RegistrosDiarios
@@ -55,14 +56,18 @@ public class RegistroDiarioService
             dto.UpdateEntity(registroExistente);
             _context.RegistrosDiarios.Update(registroExistente);
             await _context.SaveChangesAsync();
-            await _insightNotificationService.GerarAvisosDeProgressoAsync(dto.UsuarioId);
+            await _insightNotificationService.GerarAvisosDeProgressoAsync(
+                dto.UsuarioId,
+                metasAtingidasAntes: metasAtingidasAntes);
             return RegistroDiarioResponse.FromEntity(registroExistente);
         }
 
         var novoRegistro = dto.ToEntity();
         _context.RegistrosDiarios.Add(novoRegistro);
         await _context.SaveChangesAsync();
-        await _insightNotificationService.GerarAvisosDeProgressoAsync(dto.UsuarioId);
+        await _insightNotificationService.GerarAvisosDeProgressoAsync(
+            dto.UsuarioId,
+            metasAtingidasAntes: metasAtingidasAntes);
 
         return RegistroDiarioResponse.FromEntity(novoRegistro);
     }
@@ -70,13 +75,16 @@ public class RegistroDiarioService
     public async Task<bool> Atualizar(int id, RegistroDiarioRequest dto)
     {
         await ValidateRegistro(dto);
+        var metasAtingidasAntes = await _insightNotificationService.ObterEstadoAtualDasMetasAsync(dto.UsuarioId);
 
         var registroExistente = await _context.RegistrosDiarios.FindAsync(id);
         if (registroExistente == null) return false;
 
         dto.UpdateEntity(registroExistente);
         await _context.SaveChangesAsync();
-        await _insightNotificationService.GerarAvisosDeProgressoAsync(dto.UsuarioId);
+        await _insightNotificationService.GerarAvisosDeProgressoAsync(
+            dto.UsuarioId,
+            metasAtingidasAntes: metasAtingidasAntes);
         return true;
     }
 

@@ -42,6 +42,7 @@ public class MetaService
     public async Task<MetaDTO> Criar(MetaDTO dto)
     {
         ValidateMeta(dto);
+        var metasAtingidasAntes = await _insightNotificationService.ObterEstadoAtualDasMetasAsync(dto.UsuarioId);
         var valorInicial = await ObterValorInicial(dto);
 
         var novaMeta = new Meta
@@ -59,7 +60,9 @@ public class MetaService
 
         _context.Metas.Add(novaMeta);
         await _context.SaveChangesAsync();
-        await _insightNotificationService.GerarAvisosDeProgressoAsync(dto.UsuarioId);
+        await _insightNotificationService.GerarAvisosDeProgressoAsync(
+            dto.UsuarioId,
+            metasAtingidasAntes: metasAtingidasAntes);
 
         dto.Id = novaMeta.Id;
         dto.Direcao = novaMeta.Direcao;
@@ -70,6 +73,7 @@ public class MetaService
     public async Task<bool> Atualizar(int id, MetaDTO dto)
     {
         ValidateMeta(dto);
+        var metasAtingidasAntes = await _insightNotificationService.ObterEstadoAtualDasMetasAsync(dto.UsuarioId);
 
         var metaExistente = await _context.Metas.FindAsync(id);
         if (metaExistente == null) return false;
@@ -85,7 +89,9 @@ public class MetaService
         metaExistente.Ativa = dto.Ativa;
 
         await _context.SaveChangesAsync();
-        await _insightNotificationService.GerarAvisosDeProgressoAsync(dto.UsuarioId);
+        await _insightNotificationService.GerarAvisosDeProgressoAsync(
+            dto.UsuarioId,
+            metasAtingidasAntes: metasAtingidasAntes);
         return true;
     }
 

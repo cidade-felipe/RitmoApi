@@ -46,7 +46,63 @@ public class InsightNotificationService
         await _context.SaveChangesAsync();
     }
 
-    public async Task GerarAvisosDeProgressoAsync(int usuarioId, bool? imcEstavaSaudavelAntes = null)
+    public async Task<IReadOnlyDictionary<int, bool>> ObterEstadoAtualDasMetasAsync(int usuarioId)
+    {
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+        var inicioJanela = hoje.AddDays(-6);
+        var metasDoUsuario = await _context.Metas
+            .Where(meta => meta.UsuarioId == usuarioId)
+            .ToListAsync();
+
+        var estados = metasDoUsuario.ToDictionary(meta => meta.Id, _ => false);
+        var metasAtivas = metasDoUsuario
+            .Where(meta => MetaEstaAtivaHoje(meta, hoje))
+            .ToList();
+
+        if (metasAtivas.Count == 0)
+        {
+            return estados;
+        }
+
+        var registrosRecentes = await _context.RegistrosDiarios
+            .Where(registro =>
+                registro.UsuarioId == usuarioId &&
+                registro.Data >= inicioJanela &&
+                registro.Data <= hoje)
+            .OrderBy(registro => registro.Data)
+            .ToListAsync();
+
+        foreach (var meta in metasAtivas.Where(meta => meta.Categoria != "Peso"))
+        {
+            var valorAtual = CalcularValorAtualDaMeta(meta, registrosRecentes);
+            estados[meta.Id] = valorAtual.HasValue && valorAtual.Value >= meta.ValorAlvo;
+        }
+
+        var metasPeso = metasAtivas.Where(meta => meta.Categoria == "Peso").ToList();
+        if (metasPeso.Count == 0)
+        {
+            return estados;
+        }
+
+        var medidasOrdenadas = await ObterMedidasOrdenadasAsync(usuarioId);
+        if (medidasOrdenadas.Count == 0)
+        {
+            return estados;
+        }
+
+        var pesoAtual = medidasOrdenadas[^1].Peso;
+        foreach (var meta in metasPeso)
+        {
+            estados[meta.Id] = MetaPesoFoiAtingida(meta, medidasOrdenadas, pesoAtual);
+        }
+
+        return estados;
+    }
+
+    public async Task GerarAvisosDeProgressoAsync(
+        int usuarioId,
+        bool? imcEstavaSaudavelAntes = null,
+        IReadOnlyDictionary<int, bool>? metasAtingidasAntes = null)
     {
         if (!await UsuarioRecebeNotificacoes(usuarioId))
         {
@@ -87,11 +143,25 @@ public class InsightNotificationService
                 continue;
             }
 
+            var metaEstavaAtingidaAntes = ObterEstadoAnteriorDaMeta(metasAtingidasAntes, meta.Id);
+            if (metaEstavaAtingidaAntes == true)
+            {
+                continue;
+            }
+
             var mensagem = MontarMensagemMetaHabito(meta, valorAtual.Value);
-            await AdicionarInsightDoDiaSeAindaNaoExiste(usuarioId, "Meta", "positivo", mensagem);
+            await AdicionarInsightDoDiaSeAindaNaoExiste(
+                usuarioId,
+                "Meta",
+                "positivo",
+                mensagem,
+                deduplicarApenasNaoLidos: metaEstavaAtingidaAntes == false);
         }
 
-        await GerarAvisosPesoAsync(usuarioId, metasAtivas.Where(meta => meta.Categoria == "Peso").ToList());
+        await GerarAvisosPesoAsync(
+            usuarioId,
+            metasAtivas.Where(meta => meta.Categoria == "Peso").ToList(),
+            metasAtingidasAntes);
         await GerarAvisoPesoSaudavelAsync(usuarioId, imcEstavaSaudavelAntes);
         await _context.SaveChangesAsync();
     }
@@ -136,18 +206,17 @@ public class InsightNotificationService
             : $"Meta de {categoria} atingida: média de {valorAtualTexto}{unidade} nos últimos 7 dias, alvo {alvoTexto}{unidade}.";
     }
 
-    private async Task GerarAvisosPesoAsync(int usuarioId, IReadOnlyCollection<Meta> metasPeso)
+    private async Task GerarAvisosPesoAsync(
+        int usuarioId,
+        IReadOnlyCollection<Meta> metasPeso,
+        IReadOnlyDictionary<int, bool>? metasAtingidasAntes = null)
     {
         if (metasPeso.Count == 0)
         {
             return;
         }
 
-        var medidasOrdenadas = await _context.MedidasBiometricas
-            .Where(medida => medida.UsuarioId == usuarioId)
-            .OrderBy(medida => medida.Data)
-            .ThenBy(medida => medida.Id)
-            .ToListAsync();
+        var medidasOrdenadas = await ObterMedidasOrdenadasAsync(usuarioId);
 
         if (medidasOrdenadas.Count == 0)
         {
@@ -163,6 +232,12 @@ public class InsightNotificationService
                 continue;
             }
 
+            var metaEstavaAtingidaAntes = ObterEstadoAnteriorDaMeta(metasAtingidasAntes, meta.Id);
+            if (metaEstavaAtingidaAntes == true)
+            {
+                continue;
+            }
+
             var direcaoTexto = meta.Direcao switch
             {
                 "reduzir" => "redução",
@@ -173,8 +248,43 @@ public class InsightNotificationService
             var mensagem =
                 $"Meta de peso atingida: objetivo de {direcaoTexto} chegou ao alvo de {FormatarDecimal(meta.ValorAlvo)} kg.";
 
-            await AdicionarInsightDoDiaSeAindaNaoExiste(usuarioId, "Meta", "positivo", mensagem);
+            await AdicionarInsightDoDiaSeAindaNaoExiste(
+                usuarioId,
+                "Meta",
+                "positivo",
+                mensagem,
+                deduplicarApenasNaoLidos: metaEstavaAtingidaAntes == false);
         }
+    }
+
+    private async Task<List<MedidaBiometrica>> ObterMedidasOrdenadasAsync(int usuarioId)
+    {
+        return await _context.MedidasBiometricas
+            .Where(medida => medida.UsuarioId == usuarioId)
+            .OrderBy(medida => medida.Data)
+            .ThenBy(medida => medida.Id)
+            .ToListAsync();
+    }
+
+    private static bool MetaEstaAtivaHoje(Meta meta, DateOnly hoje)
+    {
+        return meta.Ativa &&
+            meta.DataInicio <= hoje &&
+            (!meta.DataFim.HasValue || meta.DataFim.Value >= hoje);
+    }
+
+    private static bool? ObterEstadoAnteriorDaMeta(
+        IReadOnlyDictionary<int, bool>? metasAtingidasAntes,
+        int metaId)
+    {
+        if (metasAtingidasAntes == null)
+        {
+            return null;
+        }
+
+        return metasAtingidasAntes.TryGetValue(metaId, out var atingidaAntes)
+            ? atingidaAntes
+            : false;
     }
 
     private static bool MetaPesoFoiAtingida(Meta meta, IReadOnlyList<MedidaBiometrica> medidasOrdenadas, decimal pesoAtual)

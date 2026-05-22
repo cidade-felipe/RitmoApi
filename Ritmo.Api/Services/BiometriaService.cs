@@ -51,6 +51,7 @@ public class BiometriaService
 
         var dataReferencia = dto.Data.Date;
         var proximoDia = dataReferencia.AddDays(1);
+        var metasAtingidasAntes = await _insightNotificationService.ObterEstadoAtualDasMetasAsync(dto.UsuarioId);
 
         var medidasDoDia = await _context.MedidasBiometricas
             .Where(m =>
@@ -78,7 +79,10 @@ public class BiometriaService
             }
 
             await _context.SaveChangesAsync();
-            await _insightNotificationService.GerarAvisosDeProgressoAsync(dto.UsuarioId, imcEstavaSaudavelAntes);
+            await _insightNotificationService.GerarAvisosDeProgressoAsync(
+                dto.UsuarioId,
+                imcEstavaSaudavelAntes,
+                metasAtingidasAntes);
 
             return MedidaBiometricaResponse.FromEntity(medidaExistente, usuario.DataNascimento);
         }
@@ -86,7 +90,10 @@ public class BiometriaService
         var novaMedida = dto.ToEntity();
         _context.MedidasBiometricas.Add(novaMedida);
         await _context.SaveChangesAsync();
-        await _insightNotificationService.GerarAvisosDeProgressoAsync(dto.UsuarioId, imcEstavaSaudavelAntes);
+        await _insightNotificationService.GerarAvisosDeProgressoAsync(
+            dto.UsuarioId,
+            imcEstavaSaudavelAntes,
+            metasAtingidasAntes);
 
         return MedidaBiometricaResponse.FromEntity(novaMedida, usuario.DataNascimento);
     }
