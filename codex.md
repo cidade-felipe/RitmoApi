@@ -1659,6 +1659,7 @@ Fato:
 - O motor atual cobre metas atingidas, metas de peso atingidas, entrada na faixa saudavel/adequada por IMC, atualizacao de perfil e troca de senha.
 - A geracao respeita `ReceberNotificacoes`.
 - A mesma mensagem nao e duplicada para o mesmo usuario dentro do mesmo dia. Para IMC, quando ha transicao de fora para dentro da faixa correta, a deduplicacao considera apenas avisos nao lidos para uma notificacao fechada nao bloquear um novo evento real.
+- Para perfil e senha, a deduplicacao tambem considera apenas avisos nao lidos. Perfil e senha sao eventos de acao direta do usuario, entao uma nova atualizacao deve voltar ao sino se o aviso anterior ja foi fechado.
 - Para metas de habito e treino, `DataInicio` define se a meta esta ativa, mas o calculo de conclusao usa os ultimos 7 dias, igual ao card de metas do frontend.
 
 Inferencia:
