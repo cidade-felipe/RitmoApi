@@ -2212,15 +2212,15 @@ Melhor acao:
 
 Fato:
 
-- `apiClient.js` aponta para `http://localhost:5066/api`.
+- `apiClient.js` usa `import.meta.env.VITE_API_URL` e fallback local `http://localhost:5066/api`.
 
 Impacto:
 
-- Deploy exige alterar codigo ou build especifico.
+- Facilita deploy sem alterar codigo entre ambientes.
 
 Melhor acao:
 
-- Usar `import.meta.env.VITE_API_BASE_URL`.
+- Manter `VITE_API_URL` configurado no repositório/ambiente de deploy.
 
 ### 4. Sem refresh token
 
@@ -2577,7 +2577,7 @@ Faltam:
 - correlation id
 - metricas
 - health checks
-- pipeline CI/CD
+- pipeline CI/CD completo (backend + testes automatizados)
 - tratamento de excecoes com tracking
 - auditoria de login/senha/exclusao
 
@@ -3289,6 +3289,7 @@ O que esta solido:
 - constraints unicas no banco
 - dashboard funcional com graficos, filtros e exportacao
 - metas de peso com conclusao por direcao historica
+- workflow de deploy do frontend no GitHub Pages em `.github/workflows/pages.yml`
 
 O que esta pendente:
 
@@ -3296,7 +3297,7 @@ O que esta pendente:
 - refresh token
 - rate limiting
 - observabilidade
-- CI/CD
+- CI/CD completo (hoje existe deploy automatico do frontend no GitHub Pages)
 - evoluir o motor automatico inicial de insights para analises mais maduras
 - reduzir acoplamento do dashboard
 - configuracao por ambiente no frontend

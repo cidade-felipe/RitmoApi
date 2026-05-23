@@ -39,7 +39,7 @@ O foco atual do produto está em:
 - refresh token
 - testes automatizados
 - observabilidade e métricas operacionais
-- pipeline de deploy
+- pipeline completo de deploy (frontend + backend com validações mais amplas)
 
 ### 2.3. Por que isso importa
 
@@ -699,12 +699,32 @@ http://localhost:5173
 dotnet ef database update --project Ritmo.Api
 ```
 
+## 10.4. Deploy do frontend no GitHub Pages
+
+O projeto agora possui workflow versionado em [.github/workflows/pages.yml](/c:/Users/felip/OneDrive/git_work/RitmoApi/.github/workflows/pages.yml), com build e deploy automáticos do frontend no Pages.
+
+Pré-requisitos no GitHub:
+
+- `Settings > Pages > Source`: `GitHub Actions`
+- `Settings > Actions > General > Workflow permissions`: `Read and write permissions`
+- variável de repositório `VITE_API_URL` apontando para a API publicada
+
+Variáveis opcionais:
+
+- `VITE_BASE_PATH`: útil para customizar base path (padrão do projeto no Pages: `/RitmoApi/`)
+
+Comportamento técnico implementado:
+
+- build do Vite respeita `VITE_BASE_PATH`
+- em produção a navegação usa `HashRouter`, evitando 404 em refresh no GitHub Pages
+- o Axios usa `VITE_API_URL` em produção e mantém fallback local para desenvolvimento
+
 ## 11. Limitações atuais
 
 ### Técnicas
 
 - não há suíte de testes automatizados
-- não há CI/CD
+- CI/CD parcial: deploy do frontend em GitHub Pages está automatizado, mas ainda faltam etapas de teste/backend
 - ainda faltam logs e métricas operacionais
 
 ### Produto
@@ -723,7 +743,7 @@ dotnet ef database update --project Ritmo.Api
 
 - criar geração automática real de insights
 - adicionar refresh token
-- preparar pipeline de validação e deploy
+- expandir pipeline com testes automatizados, validações de backend e estratégia de release
 
 ### Longo prazo
 
