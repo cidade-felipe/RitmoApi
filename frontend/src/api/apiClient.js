@@ -1,9 +1,12 @@
 import axios from 'axios';
 import { clearAuthSession, getAuthSession } from '../auth/authStorage';
 
+const defaultApiBaseUrl = 'http://localhost:5066/api';
+const configuredApiBaseUrl = String(import.meta.env.VITE_API_URL || '').trim();
+
 // Instância base do Axios configurada para a Web API do .NET
 const apiClient = axios.create({
-  baseURL: 'http://localhost:5066/api',
+  baseURL: configuredApiBaseUrl || defaultApiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
