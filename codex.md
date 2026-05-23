@@ -721,6 +721,8 @@ Campos:
 - `UsuarioId`
 - `Categoria`
 - `ValorAlvo`
+- `Direcao`
+- `ValorInicial`
 - `Descricao`
 - `DataInicio`
 - `DataFim`
@@ -740,6 +742,7 @@ Categorias atuais:
 Observacao:
 
 - Comentarios antigos no model ainda citam `Estudo` e lista antiga. A validacao atual do DTO/service nao inclui `Estudo`.
+- `Direcao`, `ValorInicial`, `Descricao` e `DataFim` sao opcionais no modelo atual.
 
 ### Insight
 
@@ -807,6 +810,10 @@ DbSets:
 - `Insights`
 - `ConfiguracoesPerfil`
 - `MedidasBiometricas`
+
+Tabela tecnica gerenciada pelo EF Core:
+
+- `__EFMigrationsHistory` (controle interno de migrations; nao e entidade de dominio e nao aparece como `DbSet`)
 
 Constraints importantes:
 
