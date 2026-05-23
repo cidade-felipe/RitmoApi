@@ -250,6 +250,7 @@ http://localhost:5173
 - Peso
 - Altura
 - Data
+- DataDia
 
 ### Meta
 
@@ -285,6 +286,11 @@ http://localhost:5173
 - ReceberNotificacoes
 - ReceberRelatorioSemanal
 - ExibirMetaNoDashboard
+
+### Observação técnica do banco
+
+- `DataDia` em `MedidaBiometrica` é uma coluna computada no PostgreSQL (derivada de `Data`) usada no índice único (`UsuarioId + DataDia`).
+- A tabela `__EFMigrationsHistory` é técnica, gerenciada pelo Entity Framework Core para controle de migrations.
 
 ## Estado atual do produto
 

@@ -218,11 +218,11 @@ classDiagram
         +int UsuarioId
         +string Categoria
         +decimal ValorAlvo
-        +string Direcao
-        +decimal ValorInicial
-        +string Descricao
+        +string? Direcao
+        +decimal? ValorInicial
+        +string? Descricao
         +date DataInicio
-        +date DataFim
+        +date? DataFim
         +bool Ativa
         +datetime DataCriacao
     }
@@ -252,8 +252,9 @@ classDiagram
         +int Id
         +int UsuarioId
         +decimal Peso
-        +decimal Altura
-        +date Data
+        +int Altura
+        +datetime Data
+        +date DataDia
     }
 
     USUARIOS "1" --> "0..*" REGISTROS_DIARIOS : possui
@@ -309,10 +310,12 @@ Ou seja, nesses casos o conteúdo deve começar direto em `classDiagram`.
 - `Peso`
 - `Altura`
 - `Data`
+- `DataDia`
 
 ### Observação
 
 O IMC não é persistido como coluna principal de negócio. Ele é calculado na API e entregue ao frontend via DTO de resposta.
+`DataDia` é coluna computada no PostgreSQL a partir de `Data` e participa da unicidade (`UsuarioId`, `DataDia`) para garantir uma biometria por usuário por dia.
 
 ## 5.4. Meta
 
@@ -327,6 +330,10 @@ O IMC não é persistido como coluna principal de negócio. Ele é calculado na 
 - `DataFim`
 - `Ativa`
 - `DataCriacao`
+
+### Observação
+
+`Direcao`, `ValorInicial`, `Descricao` e `DataFim` são opcionais no modelo atual.
 
 ## 5.5. Insight
 
