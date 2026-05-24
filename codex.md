@@ -3,7 +3,7 @@
 Este arquivo foi criado para funcionar como uma memoria longa do projeto. A ideia e que uma proxima interacao com Codex consiga entender rapidamente o que este repositorio e, como ele funciona, quais decisoes ja foram tomadas, quais riscos existem e por onde continuar sem precisar redescobrir tudo do zero.
 
 Data da criacao deste documento: 07/05/2026  
-Ultima atualizacao documentada: 08/05/2026
+Ultima atualizacao documentada: 24/05/2026
 Workspace analisado: `c:\Users\felip\OneDrive\git_work\RitmoApi`  
 Fuso informado no ambiente: `America/Sao_Paulo`  
 Modo de leitura usado: varredura manual do repositorio, leitura de backend, frontend, configuracoes, documentacao, migrations e validacao de build/lint.
@@ -102,6 +102,23 @@ Prioridade pratica:
 3. `codex.md`, quando a mudanca cria regra operacional, decisao tecnica relevante, risco novo, aprendizado de manutencao ou contexto util para uma proxima IA.
 
 Se a mudanca for puramente interna e nao justificar documentacao publica, registrar explicitamente na resposta final que nenhuma documentacao precisou ser alterada e explicar o motivo.
+
+## Atualizacao rapida de 24/05/2026
+
+### Fato
+
+Foi adicionada confirmacao explicita de logout na dashboard:
+
+- ao clicar em `Sair`, a interface agora abre `ConfirmDialog` com a pergunta `Deseja realmente sair?`
+- a sessao so e encerrada quando o usuario confirma
+- ao cancelar, o usuario permanece autenticado e continua na tela atual
+- `DashboardHeader` deixou de limpar sessao diretamente e passou a delegar via callback `onRequestLogout`
+- `Dashboard.jsx` passou a centralizar esse fluxo no estado `confirmState`, reaproveitando o mesmo padrao ja usado para confirmacoes de exclusao de meta
+
+### Validacoes executadas nessa atualizacao
+
+- `npm run lint` em `frontend`: sucesso.
+- `npm run build` em `frontend`: sucesso.
 
 ## Atualizacao rapida de 10/05/2026
 
