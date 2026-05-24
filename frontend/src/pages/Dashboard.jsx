@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pencil, LayoutDashboard, ClipboardList, Download, BarChart3, Activity, RefreshCw, X, TrendingUp, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import { useDashboardData } from '../hooks/useDashboardData';
 import { DashboardHeader } from '../components/DashboardHeader';
@@ -11,6 +12,7 @@ import { NoticeBanner } from '../components/NoticeBanner';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DateField } from '../components/DateField';
 import { SettingsPanel } from '../components/SettingsPanel';
+import { clearAuthSession } from '../auth/authStorage';
 import apiClient from '../api/apiClient';
 
 const getLocalDateInputValue = (date = new Date()) => {
@@ -45,6 +47,7 @@ const getTabsDockMotionProfile = (scrollVelocity = 0) => {
 };
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const {
     loading, registros, config, insights, user, biometria, metas,
     handleMarcarInsightLido, refreshInsights, setRegistros, setBiometria, setMetas, setUser
@@ -1431,6 +1434,18 @@ export default function Dashboard() {
       setIsConfirming(false);
     }
   };
+  const handleSolicitarLogout = () => {
+    setConfirmState({
+      title: 'Confirmar saída',
+      message: 'Deseja realmente sair?',
+      confirmLabel: 'Sair',
+      tone: 'danger',
+      action: async () => {
+        clearAuthSession();
+        navigate('/login');
+      }
+    });
+  };
 
   const tabItems = [
     { key: 'panorama', label: 'Panorama', Icon: LayoutDashboard },
@@ -1470,7 +1485,13 @@ export default function Dashboard() {
 
   return (
     <div className="container">
-      <DashboardHeader user={user} config={config} insights={insights} onMarkAsRead={handleMarcarInsightLido} />
+      <DashboardHeader
+        user={user}
+        config={config}
+        insights={insights}
+        onMarkAsRead={handleMarcarInsightLido}
+        onRequestLogout={handleSolicitarLogout}
+      />
 
       <div className="content-divider" style={{ display: 'block' }}>
         <DataFormModal 

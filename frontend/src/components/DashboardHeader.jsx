@@ -1,10 +1,7 @@
 import { Bell, LogOut, Activity, X } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { clearAuthSession } from '../auth/authStorage';
 
-export function DashboardHeader({ user, config, insights, onMarkAsRead }) {
-  const navigate = useNavigate();
+export function DashboardHeader({ user, config, insights, onMarkAsRead, onRequestLogout }) {
   const [showInsights, setShowInsights] = useState(false);
   const panelRef = useRef(null);
   const firstName = String(user?.nome || user?.name || '')
@@ -26,8 +23,9 @@ export function DashboardHeader({ user, config, insights, onMarkAsRead }) {
   }, []);
 
   const handleLogout = () => {
-    clearAuthSession();
-    navigate('/login');
+    if (typeof onRequestLogout === 'function') {
+      onRequestLogout();
+    }
   };
   const getInsightClassName = (nivel) => {
     const normalizedLevel = String(nivel || 'info').trim().toLowerCase();
