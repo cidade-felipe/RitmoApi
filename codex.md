@@ -119,6 +119,10 @@ Foi corrigida a validacao de datas manuais impossiveis no frontend:
 
 Essa mudanca reduz confusao na UX: o usuario entende que digitou uma data inexistente, em vez de ver o campo apagado e receber uma mensagem de obrigatoriedade.
 
+### Fato adicional
+
+Foi criado o arquivo `roteiro_banco_de_dados.md` na raiz do projeto para apoiar a apresentacao oral do banco de dados. O roteiro explica o modelo relacional do Ritmo, lista as tabelas de dominio, diferencia as relacoes `1:N` do relacionamento `1:1` entre `Usuarios` e `ConfiguracoesPerfil`, descreve como o `1:1` e garantido por FK e indice unico em `ConfiguracoesPerfil.UsuarioId`, e inclui falas prontas, perguntas provaveis da banca e pontos de cuidado para nao confundir unicidade diaria com cardinalidade `1:1`.
+
 ## Atualizacao rapida de 24/05/2026
 
 ### Fato
