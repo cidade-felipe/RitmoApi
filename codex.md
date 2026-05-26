@@ -3,7 +3,7 @@
 Este arquivo foi criado para funcionar como uma memoria longa do projeto. A ideia e que uma proxima interacao com Codex consiga entender rapidamente o que este repositorio e, como ele funciona, quais decisoes ja foram tomadas, quais riscos existem e por onde continuar sem precisar redescobrir tudo do zero.
 
 Data da criacao deste documento: 07/05/2026  
-Ultima atualizacao documentada: 24/05/2026
+Ultima atualizacao documentada: 26/05/2026
 Workspace analisado: `c:\Users\felip\OneDrive\git_work\RitmoApi`  
 Fuso informado no ambiente: `America/Sao_Paulo`  
 Modo de leitura usado: varredura manual do repositorio, leitura de backend, frontend, configuracoes, documentacao, migrations e validacao de build/lint.
@@ -102,6 +102,22 @@ Prioridade pratica:
 3. `codex.md`, quando a mudanca cria regra operacional, decisao tecnica relevante, risco novo, aprendizado de manutencao ou contexto util para uma proxima IA.
 
 Se a mudanca for puramente interna e nao justificar documentacao publica, registrar explicitamente na resposta final que nenhuma documentacao precisou ser alterada e explicar o motivo.
+
+## Atualizacao rapida de 26/05/2026
+
+### Fato
+
+Foi corrigida a validacao de datas manuais impossiveis no frontend:
+
+- `DateField.jsx` agora preserva a data digitada quando ela esta completa mas nao existe, por exemplo `22/22/2222`.
+- O componente passou a emitir `onManualValidationChange`, permitindo que a tela diferencie data impossivel de campo vazio.
+- `Login.jsx` mostra `Essa data nao existe.` no cadastro quando a data de nascimento manual e impossivel.
+- `SettingsPanel.jsx` aplica a mesma mensagem ao editar a data de nascimento no perfil.
+- Datas vazias continuam mostrando a mensagem de obrigatoriedade, e datas futuras continuam com a mensagem especifica de futuro.
+
+### Impacto pratico
+
+Essa mudanca reduz confusao na UX: o usuario entende que digitou uma data inexistente, em vez de ver o campo apagado e receber uma mensagem de obrigatoriedade.
 
 ## Atualizacao rapida de 24/05/2026
 

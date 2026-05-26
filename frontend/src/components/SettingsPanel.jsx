@@ -7,6 +7,7 @@ import { clearAuthSession, saveAuthSession } from '../auth/authStorage';
 import { DateField } from './DateField';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const impossibleDateMessage = 'Essa data não existe.';
 
 const initialProfileErrors = {
   nome: '',
@@ -83,6 +84,7 @@ export function SettingsPanel({ user, onUserUpdated, onStatusChange, onInsightsR
   const [profileData, setProfileData] = useState(() => getProfileFormData(user));
   const [profileErrors, setProfileErrors] = useState(initialProfileErrors);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isProfileBirthDateImpossible, setIsProfileBirthDateImpossible] = useState(false);
 
   const [passwordData, setPasswordData] = useState({
     senhaAtual: '',
@@ -119,6 +121,7 @@ export function SettingsPanel({ user, onUserUpdated, onStatusChange, onInsightsR
 
   useEffect(() => {
     setProfileData(getProfileFormData(user));
+    setIsProfileBirthDateImpossible(false);
   }, [user]);
 
   const updateProfileField = (field, value) => {
@@ -130,6 +133,23 @@ export function SettingsPanel({ user, onUserUpdated, onStatusChange, onInsightsR
     setProfileErrors((current) => ({
       ...current,
       [field]: '',
+      form: ''
+    }));
+  };
+
+  const updateProfileBirthDateField = (value) => {
+    if (value) {
+      setIsProfileBirthDateImpossible(false);
+    }
+
+    updateProfileField('dataNascimento', value);
+  };
+
+  const handleProfileBirthDateManualValidation = ({ isInvalid }) => {
+    setIsProfileBirthDateImpossible(isInvalid);
+    setProfileErrors((current) => ({
+      ...current,
+      dataNascimento: isInvalid ? impossibleDateMessage : '',
       form: ''
     }));
   };
@@ -183,7 +203,9 @@ export function SettingsPanel({ user, onUserUpdated, onStatusChange, onInsightsR
       nextErrors.email = 'Informe um email válido.';
     }
 
-    if (!profileData.dataNascimento) {
+    if (isProfileBirthDateImpossible) {
+      nextErrors.dataNascimento = impossibleDateMessage;
+    } else if (!profileData.dataNascimento) {
       nextErrors.dataNascimento = 'Data de nascimento é obrigatória.';
     } else if (profileData.dataNascimento > todayDate) {
       nextErrors.dataNascimento = 'Data de nascimento não pode estar no futuro.';
@@ -416,9 +438,10 @@ export function SettingsPanel({ user, onUserUpdated, onStatusChange, onInsightsR
               <DateField
                 label="Data de nascimento"
                 value={profileData.dataNascimento}
-                onChange={(e) => updateProfileField('dataNascimento', e.target.value)}
+                onChange={(e) => updateProfileBirthDateField(e.target.value)}
                 max={todayDate}
                 allowManualInput
+                onManualValidationChange={handleProfileBirthDateManualValidation}
                 inputClassName={profileErrors.dataNascimento ? 'input-field-error' : ''}
                 buttonMode="icon"
                 buttonClassName="settings-date-picker-btn"

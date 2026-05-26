@@ -22,6 +22,7 @@ const backendFieldMap = {
 };
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const impossibleDateMessage = 'Essa data não existe.';
 
 const normalizeBackendErrors = (errors) => {
   const nextErrors = { ...initialFieldErrors };
@@ -63,6 +64,7 @@ export default function Login() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [error, setError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState(initialFieldErrors);
+  const [isBirthDateImpossible, setIsBirthDateImpossible] = useState(false);
   const todayDate = new Date().toISOString().split('T')[0];
 
   const updateField = (field, value) => {
@@ -87,6 +89,26 @@ export default function Login() {
     }
   };
 
+  const updateBirthDateField = (value) => {
+    if (value) {
+      setIsBirthDateImpossible(false);
+    }
+
+    updateField('dataNascimento', value);
+  };
+
+  const handleBirthDateManualValidation = ({ isInvalid }) => {
+    setIsBirthDateImpossible(isInvalid);
+    setFieldErrors((current) => ({
+      ...current,
+      dataNascimento: isInvalid ? impossibleDateMessage : ''
+    }));
+
+    if (isInvalid && error) {
+      setError(null);
+    }
+  };
+
   const validateForm = () => {
     const nextErrors = { ...initialFieldErrors };
     const nome = formData.nome.trim();
@@ -98,7 +120,9 @@ export default function Login() {
         nextErrors.nome = 'Nome deve ter pelo menos 3 caracteres.';
       }
 
-      if (!formData.dataNascimento) {
+      if (isBirthDateImpossible) {
+        nextErrors.dataNascimento = impossibleDateMessage;
+      } else if (!formData.dataNascimento) {
         nextErrors.dataNascimento = 'Data de nascimento é obrigatória.';
       } else if (formData.dataNascimento > todayDate) {
         nextErrors.dataNascimento = 'Data de nascimento não pode estar no futuro.';
@@ -130,6 +154,7 @@ export default function Login() {
     setIsRegistering((current) => !current);
     setIsPasswordVisible(false);
     setError(null);
+    setIsBirthDateImpossible(false);
     setFieldErrors(initialFieldErrors);
   };
 
@@ -219,10 +244,11 @@ export default function Login() {
                   <DateField
                     label="Data de Nascimento"
                     value={formData.dataNascimento}
-                    onChange={(e) => updateField('dataNascimento', e.target.value)}
+                    onChange={(e) => updateBirthDateField(e.target.value)}
                     required={isRegistering}
                     max={todayDate}
                     allowManualInput
+                    onManualValidationChange={handleBirthDateManualValidation}
                     inputClassName={fieldErrors.dataNascimento ? 'input-field-error' : ''}
                     buttonMode="icon"
                     buttonClassName="auth-register-date-picker-btn"
