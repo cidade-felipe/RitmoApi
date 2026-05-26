@@ -47,7 +47,7 @@ Hoje o projeto já funciona como um MVP full stack com:
 - senhas armazenadas com hash
 - proteção de rotas por usuário autenticado
 - validação inline no cadastro com mensagens por campo
-- campo de data de nascimento com digitação manual e calendário
+- campo de data de nascimento com digitação manual, calendário e aviso específico para datas impossíveis
 - aba `Configurações` no dashboard para atualizar dados do perfil, trocar senha e excluir conta com confirmação
 
 ### Registro diário

@@ -102,6 +102,7 @@ No estado atual da interface de autenticação:
 
 - o cadastro mostra erros por campo, em vez de depender apenas de mensagens genéricas
 - a data de nascimento aceita digitação manual no formato da interface e também uso do calendário
+- datas impossíveis digitadas manualmente, como dia ou mês inexistente, mostram mensagem específica em vez de serem tratadas como campo vazio
 - o layout do formulário de cadastro foi refinado para acomodar melhor campos como sexo biológico
 - o login exibe a mensagem específica enviada pela API, diferenciando email inexistente de senha incorreta
 
@@ -127,6 +128,7 @@ No estado atual da interface:
 - a animação dessa transição responde à velocidade do scroll para dar leitura mais premium sem quebrar usabilidade
 - mutações como criar meta, excluir meta e salvar registro passaram a atualizar estado local em vez de recarregar toda a dashboard
 - a aba `Configurações` permite atualizar dados do perfil, trocar senha e excluir a conta com confirmação
+- o campo de data de nascimento das configurações reaproveita a mesma validação visual do cadastro para datas impossíveis
 - atualizações de perfil e senha também geram notificações persistidas no sino
 
 ### 4.3. Registro diário

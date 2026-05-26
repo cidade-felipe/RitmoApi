@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { CalendarDays } from 'lucide-react';
 
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+const completeDisplayDatePattern = /^\d{2}\/\d{2}\/\d{4}$/;
 
 const formatIsoDateToDisplay = (value) => {
   if (!isoDatePattern.test(String(value || ''))) {
@@ -65,13 +66,15 @@ export function DateField({
   buttonMode = 'full',
   buttonAriaLabel,
   allowManualInput = false,
-  placeholder = 'dd/mm/aaaa'
+  placeholder = 'dd/mm/aaaa',
+  onManualValidationChange
 }) {
   const inputRef = useRef(null);
   const pickerInputRef = useRef(null);
   const [manualValue, setManualValue] = useState('');
   const [isManualEditing, setIsManualEditing] = useState(false);
-  const displayManualValue = isManualEditing
+  const [hasInvalidManualValue, setHasInvalidManualValue] = useState(false);
+  const displayManualValue = isManualEditing || hasInvalidManualValue
     ? manualValue
     : formatIsoDateToDisplay(value);
 
@@ -102,14 +105,23 @@ export function DateField({
     if (allowManualInput) {
       setManualValue(formatIsoDateToDisplay(event.target.value));
       setIsManualEditing(false);
+      setHasInvalidManualValue(false);
+      onManualValidationChange?.({ isInvalid: false, value: formatIsoDateToDisplay(event.target.value) });
     }
 
     onChange?.(event);
   };
 
   const handleManualFocus = () => {
-    setManualValue(formatIsoDateToDisplay(value));
+    setManualValue(hasInvalidManualValue ? manualValue : formatIsoDateToDisplay(value));
     setIsManualEditing(true);
+  };
+
+  const updateManualValidity = (formattedValue, isoValue) => {
+    const isInvalid = completeDisplayDatePattern.test(formattedValue) && !isoValue;
+
+    setHasInvalidManualValue(isInvalid);
+    onManualValidationChange?.({ isInvalid, value: formattedValue });
   };
 
   const handleManualChange = (event) => {
@@ -118,21 +130,25 @@ export function DateField({
 
     if (!formattedValue) {
       emitChange('');
+      updateManualValidity('', null);
       return;
     }
 
     const isoValue = parseDisplayDateToIso(formattedValue);
     if (isoValue) {
       emitChange(isoValue);
+      updateManualValidity(formattedValue, isoValue);
       return;
     }
 
     emitChange('');
+    updateManualValidity(formattedValue, null);
   };
 
   const handleManualBlur = () => {
     if (!manualValue.trim()) {
       emitChange('');
+      updateManualValidity('', null);
       setIsManualEditing(false);
       return;
     }
@@ -140,12 +156,14 @@ export function DateField({
     const isoValue = parseDisplayDateToIso(manualValue);
     if (!isoValue) {
       emitChange('');
+      updateManualValidity(manualValue, null);
       setIsManualEditing(false);
       return;
     }
 
     setManualValue(formatIsoDateToDisplay(isoValue));
     setIsManualEditing(false);
+    updateManualValidity(formatIsoDateToDisplay(isoValue), isoValue);
     emitChange(isoValue);
   };
 
@@ -167,6 +185,7 @@ export function DateField({
               required={required}
               disabled={disabled}
               placeholder={placeholder}
+              aria-invalid={hasInvalidManualValue || undefined}
             />
             <input
               ref={pickerInputRef}
